@@ -33,6 +33,7 @@ import asyncio
 import io
 import os
 import tempfile
+import urllib.parse
 import zipfile
 from contextlib import asynccontextmanager
 from functools import partial
@@ -171,16 +172,18 @@ async def generate_minutes(
             zf.writestr("음성인식결과.docx", transcript_buf.read())
         zip_buf.seek(0)
 
-        safe_title = "".join(
-            c if c.isalnum() or c in " _-" else "_"
-            for c in (title or "회의")
-        ).strip("_") or "회의"
+        zip_filename = f"{title or '회의'}_결과.zip"
+        encoded_filename = urllib.parse.quote(zip_filename)
 
         return StreamingResponse(
             zip_buf,
             media_type="application/zip",
             headers={
-                "Content-Disposition": f'attachment; filename="{safe_title}_결과.zip"'
+                # RFC 5987: filename*= 으로 UTF-8 파일명 전달, Latin-1 에러 방지
+                "Content-Disposition": (
+                    f"attachment; filename=\"result.zip\"; "
+                    f"filename*=UTF-8''{encoded_filename}"
+                )
             },
         )
 
