@@ -290,6 +290,49 @@ def _add_section(doc: Document, title: str, lines: list[str]):
         add_run(p, line, size_pt=10, color=DARK)
 
 
+# ── 음성인식 원문 DOCX ────────────────────────────────────────────────
+
+def _split_transcript(transcript: str) -> list[str]:
+    """전사 텍스트를 화면에 표시하기 좋은 줄 단위로 분할합니다."""
+    import re
+    sentences = re.split(r"(?<=[.!?。])\s+", transcript.strip())
+    lines: list[str] = []
+    current = ""
+    for sent in sentences:
+        if len(current) + len(sent) > 120:
+            if current:
+                lines.append(current.strip())
+            current = sent
+        else:
+            current = (current + " " + sent).strip() if current else sent
+    if current:
+        lines.append(current.strip())
+    return lines if lines else [transcript]
+
+
+def build_transcript_document(transcript: str, metadata: dict) -> Document:
+    """ASR 전사 결과를 회의록과 동일한 포맷의 DOCX로 생성합니다."""
+    date_time = metadata.get("일시", "")
+    location = metadata.get("장소", "")
+    date_place = " / ".join(part for part in [date_time, location] if part)
+
+    agenda_raw = metadata.get("안건", [])
+    agenda_lines = (
+        [f"{i+1}. {a}" for i, a in enumerate(agenda_raw)]
+        if agenda_raw else []
+    )
+
+    data = {
+        "회의명": "음성 인식 결과",
+        "일시 및 장소": date_place,
+        "참석자": metadata.get("참석자", ""),
+        "회의 안건": agenda_lines,
+        "주요 회의 내용": _split_transcript(transcript),
+        "Action Item": [],
+    }
+    return build_document(data)
+
+
 # ── CLI 진입점 ────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
