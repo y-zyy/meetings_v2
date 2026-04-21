@@ -2,20 +2,25 @@
 FastAPI 회의록 자동 생성 파이프라인
 
 흐름:
-  오디오 업로드 → WhisperX (ASR) → LLM (JSON) → python-docx × 2 → ZIP 반환
+  오디오 업로드 → WhisperX (ASR)
+                → LLM ① 회의록 JSON 생성  ┐ (병렬)
+                → LLM ② 전사본 정제       ┘
+                → python-docx × 2 → ZIP 반환
 
 실행:
   uvicorn main:app --host 0.0.0.0 --port 8000
 
 환경 변수 (필수):
-  LLM_ENDPOINT   - LLM API 엔드포인트  (예: http://10.0.0.1:8080/v1)
-  LLM_API_TOKEN  - LLM API 인증 토큰
+  LLM_ENDPOINT                  - LLM API 엔드포인트  (예: http://10.0.0.1:8080/v1)
+  LLM_API_TOKEN                 - LLM API 인증 토큰
 
 환경 변수 (선택):
-  LLM_MODEL        - 모델 이름 (기본: default)
-  ASR_DEVICE       - cuda / cpu (기본: cuda)
-  ASR_COMPUTE_TYPE - float16 / int8 (기본: float16)
-  ASR_BATCH_SIZE   - 배치 크기 (기본: 16)
+  LLM_MODEL                     - 모델 이름 (기본: default)
+  ASR_DEVICE                    - cuda / cpu (기본: cuda)
+  ASR_COMPUTE_TYPE              - float16 / int8 (기본: float16)
+  ASR_BATCH_SIZE                - 배치 크기 (기본: 16)
+  TRANSCRIPT_REFINE_PROMPT      - 전사본 정제 시스템 프롬프트 (직접 텍스트)
+  TRANSCRIPT_REFINE_PROMPT_FILE - 전사본 정제 프롬프트 파일 경로
 
 curl 예시:
   curl -X POST http://localhost:8000/generate-minutes \\
@@ -31,6 +36,7 @@ curl 예시:
 
 import asyncio
 import io
+import logging
 import os
 import tempfile
 import urllib.parse
@@ -45,10 +51,38 @@ from fastapi.responses import StreamingResponse
 import asr as asr_module
 from asr import transcribe_audio
 from generate import build_document, build_transcript_document
-from llm import text_to_meeting_json
+from llm import refine_transcript, text_to_meeting_json
+
+# ── 로깅 설정 ─────────────────────────────────────────────────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
 ALLOWED_EXTENSIONS = {".mp3", ".mp4", ".wav", ".m4a", ".flac", ".ogg", ".webm"}
 
+
+# ── 한글 인코딩 복구 ──────────────────────────────────────────────────
+
+def _fix_encoding(value: str | None) -> str | None:
+    """python-multipart가 Latin-1로 잘못 디코딩한 한글을 UTF-8로 복구합니다."""
+    if not value:
+        return value
+    try:
+        return value.encode("latin-1").decode("utf-8")
+    except (UnicodeDecodeError, UnicodeEncodeError):
+        return value
+
+
+def _fix_encoding_list(values: list[str] | None) -> list[str]:
+    if not values:
+        return []
+    return [_fix_encoding(v) or v for v in values]
+
+
+# ── 서버 수명 주기 ────────────────────────────────────────────────────
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -62,11 +96,8 @@ async def lifespan(app: FastAPI):
         None,
         partial(asr_module.init_model, device, compute_type, batch_size),
     )
-    print(f"[startup] Whisper model loaded on {device} ({compute_type})")
 
     yield  # 서버 실행 중
-
-    # 명시적 정리 없이 프로세스 종료 시 GPU 메모리 해제
 
 
 app = FastAPI(
@@ -76,6 +107,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+# ── 엔드포인트 ────────────────────────────────────────────────────────
 
 @app.get("/health")
 def health():
@@ -95,17 +128,13 @@ async def generate_minutes(
     participants: str | None = Form(default=None, description="참석자 (쉼표 구분)"),
     agenda: list[str] | None = Form(default=None, description="안건 (여러 번 입력 가능)"),
 ):
-    """
-    오디오 파일과 회의 메타데이터를 받아 다음 순서로 처리합니다:
+    # ── 한글 인코딩 복구 ───────────────────────────────────────────────
+    title = _fix_encoding(title)
+    date_time = _fix_encoding(date_time)
+    location = _fix_encoding(location)
+    participants = _fix_encoding(participants)
+    agenda = _fix_encoding_list(agenda)
 
-    1. WhisperX로 음성 → 텍스트 변환
-    2. LLM으로 텍스트 + 메타데이터 → 회의록 JSON 변환
-       (안건이 제공된 경우 해당 안건을 기준으로 회의 내용 정리)
-    3. python-docx로 DOCX 2개 생성
-       - 회의록.docx  : LLM이 정리한 최종 회의록
-       - 음성인식결과.docx : ASR 원문 텍스트 (동일 포맷)
-    4. ZIP으로 묶어 반환
-    """
     suffix = Path(audio.filename or "audio.mp3").suffix.lower()
     if suffix not in ALLOWED_EXTENSIONS:
         raise HTTPException(
@@ -118,59 +147,70 @@ async def generate_minutes(
         "일시": date_time or "",
         "장소": location or "",
         "참석자": participants or "",
-        "안건": agenda or [],
+        "안건": agenda,
     }
+
+    logger.info("[API] 요청 수신: 파일=%s, 회의명=%s, 안건 수=%d",
+                audio.filename, title or "(없음)", len(agenda))
 
     audio_path: str | None = None
 
     try:
-        # ── 1. 오디오 임시 저장 ────────────────────────────────────────
+        # ── STEP 1/4 오디오 저장 ──────────────────────────────────────
+        logger.info("[STEP 1/4] 오디오 임시 저장 시작")
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             tmp.write(await audio.read())
             audio_path = tmp.name
+        logger.info("[STEP 1/4] 오디오 임시 저장 완료: %s", audio_path)
 
-        # ── 2. ASR (블로킹 → 스레드풀, 모델은 이미 GPU에 상주) ────────
+        # ── STEP 2/4 ASR ──────────────────────────────────────────────
+        logger.info("[STEP 2/4] ASR(음성→텍스트) 시작")
         try:
             loop = asyncio.get_event_loop()
             transcript: str = await loop.run_in_executor(
-                None,
-                transcribe_audio,
-                audio_path,
+                None, transcribe_audio, audio_path
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"음성 인식 중 오류: {e}") from e
 
         if not transcript.strip():
             raise HTTPException(status_code=422, detail="음성에서 텍스트를 인식하지 못했습니다.")
+        logger.info("[STEP 2/4] ASR 완료: %d자 전사", len(transcript))
 
-        # ── 3. LLM: 전사본 + 메타데이터 → 회의록 JSON ────────────────
+        # ── STEP 3/4 LLM (회의록 JSON + 전사본 정제 병렬 실행) ────────
+        logger.info("[STEP 3/4] LLM 처리 시작 (회의록 JSON 생성 + 전사본 정제 병렬)")
         try:
-            meeting_data = await text_to_meeting_json(transcript, metadata)
+            meeting_data, refined_text = await asyncio.gather(
+                text_to_meeting_json(transcript, metadata),
+                refine_transcript(transcript, metadata),
+            )
         except EnvironmentError as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
         except ValueError as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"회의록 분석 중 오류: {e}") from e
+            raise HTTPException(status_code=500, detail=f"LLM 처리 중 오류: {e}") from e
+        logger.info("[STEP 3/4] LLM 처리 완료")
 
-        # ── 4. DOCX 2개 생성 (인메모리) ───────────────────────────────
+        # ── STEP 4/4 DOCX 생성 및 ZIP 반환 ───────────────────────────
+        logger.info("[STEP 4/4] DOCX 생성 시작")
         try:
             minutes_buf = io.BytesIO()
             build_document(meeting_data).save(minutes_buf)
             minutes_buf.seek(0)
 
             transcript_buf = io.BytesIO()
-            build_transcript_document(transcript, metadata).save(transcript_buf)
+            build_transcript_document(refined_text, metadata).save(transcript_buf)
             transcript_buf.seek(0)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"문서 생성 중 오류: {e}") from e
 
-        # ── 5. ZIP으로 묶어 반환 ───────────────────────────────────────
         zip_buf = io.BytesIO()
         with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
             zf.writestr("회의록.docx", minutes_buf.read())
             zf.writestr("음성인식결과.docx", transcript_buf.read())
         zip_buf.seek(0)
+        logger.info("[STEP 4/4] ZIP 생성 완료, 응답 반환")
 
         zip_filename = f"{title or '회의'}_결과.zip"
         encoded_filename = urllib.parse.quote(zip_filename)
@@ -179,7 +219,6 @@ async def generate_minutes(
             zip_buf,
             media_type="application/zip",
             headers={
-                # RFC 5987: filename*= 으로 UTF-8 파일명 전달, Latin-1 에러 방지
                 "Content-Disposition": (
                     f"attachment; filename=\"result.zip\"; "
                     f"filename*=UTF-8''{encoded_filename}"

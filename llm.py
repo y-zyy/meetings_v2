@@ -2,18 +2,27 @@
 LLM 모듈 (OpenAI 호환 API, 스트리밍)
 
 환경 변수:
-  LLM_ENDPOINT   - API 엔드포인트 (예: http://10.0.0.1:8080/v1)
-  LLM_API_TOKEN  - API 인증 토큰
-  LLM_MODEL      - 모델 이름 (기본: default)
+  LLM_ENDPOINT                  - API 엔드포인트 (예: http://10.0.0.1:8080/v1)
+  LLM_API_TOKEN                 - API 인증 토큰
+  LLM_MODEL                     - 모델 이름 (기본: default)
+  TRANSCRIPT_REFINE_PROMPT      - 전사본 정제용 시스템 프롬프트 (직접 입력)
+  TRANSCRIPT_REFINE_PROMPT_FILE - 전사본 정제용 시스템 프롬프트 파일 경로
+                                  (TRANSCRIPT_REFINE_PROMPT 미설정 시 사용)
 """
 
 import json
+import logging
 import os
 import re
+import time
 
 from openai import AsyncOpenAI
 
-_SYSTEM_PROMPT = """\
+logger = logging.getLogger(__name__)
+
+# ── 회의록 JSON 생성 프롬프트 ─────────────────────────────────────────
+
+_MINUTES_SYSTEM_PROMPT = """\
 당신은 회의 내용을 분석하여 정형화된 회의록 JSON을 생성하는 전문가입니다.
 
 사용자가 제공하는 텍스트는 회의 음성을 자동 인식한 전사본입니다.
@@ -54,6 +63,42 @@ _SYSTEM_PROMPT = """\
 - 모든 텍스트는 한국어로 작성하세요.
 """
 
+# ── 전사본 정제 프롬프트 (기본값 / 환경 변수로 교체 가능) ─────────────
+
+_DEFAULT_TRANSCRIPT_REFINE_PROMPT = """\
+당신은 회의 음성 전사본을 교정하는 전문가입니다.
+
+아래 지침에 따라 전사본을 정제하세요:
+1. 음성인식 오류(잘못 인식된 단어, 불필요한 반복)를 수정하세요.
+2. 문장 부호(마침표, 쉼표 등)를 자연스럽게 추가하세요.
+3. 주제 전환이 있는 부분에서 단락을 나누세요.
+4. 원문 내용을 요약하거나 삭제하지 말고 최대한 보존하세요.
+5. 마크다운 없이 순수 텍스트로 출력하세요.
+"""
+
+
+def _get_transcript_refine_prompt() -> str:
+    """환경 변수 또는 파일에서 전사본 정제 프롬프트를 로드합니다."""
+    # 1순위: 환경 변수에 직접 입력된 프롬프트
+    prompt = os.environ.get("TRANSCRIPT_REFINE_PROMPT", "").strip()
+    if prompt:
+        logger.info("[LLM] 전사본 정제 프롬프트: 환경 변수(TRANSCRIPT_REFINE_PROMPT) 사용")
+        return prompt
+    # 2순위: 파일 경로로 지정된 프롬프트
+    prompt_file = os.environ.get("TRANSCRIPT_REFINE_PROMPT_FILE", "").strip()
+    if prompt_file:
+        if os.path.exists(prompt_file):
+            with open(prompt_file, encoding="utf-8") as f:
+                content = f.read().strip()
+            logger.info("[LLM] 전사본 정제 프롬프트: 파일(%s) 사용", prompt_file)
+            return content
+        logger.warning("[LLM] TRANSCRIPT_REFINE_PROMPT_FILE 경로를 찾을 수 없습니다: %s", prompt_file)
+    # 기본값
+    logger.info("[LLM] 전사본 정제 프롬프트: 기본값 사용")
+    return _DEFAULT_TRANSCRIPT_REFINE_PROMPT
+
+
+# ── 공통 헬퍼 ─────────────────────────────────────────────────────────
 
 def _get_client() -> AsyncOpenAI:
     endpoint = os.environ.get("LLM_ENDPOINT", "").strip()
@@ -95,8 +140,27 @@ def _extract_json(text: str) -> str:
     return text.strip()
 
 
+async def _stream_completion(client: AsyncOpenAI, model: str, messages: list) -> str:
+    """스트리밍 완성 요청을 보내고 전체 텍스트를 반환합니다."""
+    stream = await client.chat.completions.create(
+        model=model,
+        messages=messages,
+        temperature=0.1,
+        max_tokens=32768,
+        stream=True,
+    )
+    full_text = ""
+    async for chunk in stream:
+        delta = chunk.choices[0].delta.content
+        if delta:
+            full_text += delta
+    return full_text
+
+
+# ── 공개 API ──────────────────────────────────────────────────────────
+
 async def text_to_meeting_json(transcript: str, metadata: dict | None = None) -> dict:
-    """ASR 전사본과 선택적 메타데이터를 LLM에 전달하고 회의록 JSON dict를 반환합니다."""
+    """ASR 전사본과 메타데이터를 LLM에 전달하고 회의록 JSON dict를 반환합니다."""
     client = _get_client()
     model = os.environ.get("LLM_MODEL", "default")
 
@@ -107,30 +171,53 @@ async def text_to_meeting_json(transcript: str, metadata: dict | None = None) ->
         f"[전사본]\n{transcript}"
     )
 
-    messages = [
-        {"role": "system", "content": _SYSTEM_PROMPT},
-        {"role": "user", "content": user_content},
-    ]
+    logger.info("[LLM] 회의록 JSON 생성 시작 (model=%s)", model)
+    t0 = time.time()
 
-    stream = await client.chat.completions.create(
-        model=model,
-        messages=messages,
-        temperature=0.1,
-        max_tokens=32768,
-        stream=True,
+    full_text = await _stream_completion(
+        client,
+        model,
+        [
+            {"role": "system", "content": _MINUTES_SYSTEM_PROMPT},
+            {"role": "user", "content": user_content},
+        ],
     )
 
-    full_text = ""
-    async for chunk in stream:
-        delta = chunk.choices[0].delta.content
-        if delta:
-            full_text += delta
+    logger.info("[LLM] 회의록 JSON 생성 완료 (%.1f초, %d자)", time.time() - t0, len(full_text))
 
     json_str = _extract_json(full_text)
-
     try:
         return json.loads(json_str)
     except json.JSONDecodeError as e:
         raise ValueError(
             f"LLM이 유효한 JSON을 반환하지 않았습니다: {e}\n응답:\n{full_text}"
         ) from e
+
+
+async def refine_transcript(transcript: str, metadata: dict | None = None) -> str:
+    """ASR 원문을 LLM으로 정제하여 읽기 좋은 텍스트를 반환합니다."""
+    client = _get_client()
+    model = os.environ.get("LLM_MODEL", "default")
+    system_prompt = _get_transcript_refine_prompt()
+
+    meta_block = _build_meta_block(metadata or {})
+    user_content = (
+        f"다음 회의 전사본을 정제해주세요."
+        f"{meta_block}\n"
+        f"[전사본]\n{transcript}"
+    )
+
+    logger.info("[LLM] 전사본 정제 시작 (model=%s)", model)
+    t0 = time.time()
+
+    refined = await _stream_completion(
+        client,
+        model,
+        [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_content},
+        ],
+    )
+
+    logger.info("[LLM] 전사본 정제 완료 (%.1f초, %d자)", time.time() - t0, len(refined))
+    return refined
