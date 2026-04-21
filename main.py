@@ -34,22 +34,45 @@ import io
 import os
 import tempfile
 import zipfile
+from contextlib import asynccontextmanager
 from functools import partial
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 
+import asr as asr_module
 from asr import transcribe_audio
 from generate import build_document, build_transcript_document
 from llm import text_to_meeting_json
 
 ALLOWED_EXTENSIONS = {".mp3", ".mp4", ".wav", ".m4a", ".flac", ".ogg", ".webm"}
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """서버 시작 시 Whisper 모델을 GPU에 로드하고, 종료 시까지 유지합니다."""
+    device = os.getenv("ASR_DEVICE", "cuda")
+    compute_type = os.getenv("ASR_COMPUTE_TYPE", "float16")
+    batch_size = int(os.getenv("ASR_BATCH_SIZE", "16"))
+
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(
+        None,
+        partial(asr_module.init_model, device, compute_type, batch_size),
+    )
+    print(f"[startup] Whisper model loaded on {device} ({compute_type})")
+
+    yield  # 서버 실행 중
+
+    # 명시적 정리 없이 프로세스 종료 시 GPU 메모리 해제
+
+
 app = FastAPI(
     title="회의록 자동 생성 API",
     description="음성 파일을 업로드하면 회의록과 음성인식 결과 DOCX 2개가 담긴 ZIP을 반환합니다.",
     version="2.0.0",
+    lifespan=lifespan,
 )
 
 
@@ -105,22 +128,13 @@ async def generate_minutes(
             tmp.write(await audio.read())
             audio_path = tmp.name
 
-        # ── 2. ASR (블로킹 → 스레드풀) ───────────────────────────────
-        device = os.getenv("ASR_DEVICE", "cuda")
-        compute_type = os.getenv("ASR_COMPUTE_TYPE", "float16")
-        batch_size = int(os.getenv("ASR_BATCH_SIZE", "16"))
-
+        # ── 2. ASR (블로킹 → 스레드풀, 모델은 이미 GPU에 상주) ────────
         try:
             loop = asyncio.get_event_loop()
             transcript: str = await loop.run_in_executor(
                 None,
-                partial(
-                    transcribe_audio,
-                    audio_path,
-                    device=device,
-                    batch_size=batch_size,
-                    compute_type=compute_type,
-                ),
+                transcribe_audio,
+                audio_path,
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"음성 인식 중 오류: {e}") from e
