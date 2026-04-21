@@ -1,7 +1,17 @@
+"""
+LLM 모듈 (OpenAI 호환 API, 스트리밍)
+
+환경 변수:
+  LLM_ENDPOINT   - API 엔드포인트 (예: http://10.0.0.1:8080/v1)
+  LLM_API_TOKEN  - API 인증 토큰
+  LLM_MODEL      - 모델 이름 (기본: default)
+"""
+
 import json
+import os
 import re
 
-import anthropic
+from openai import AsyncOpenAI
 
 _SYSTEM_PROMPT = """\
 당신은 회의 내용을 분석하여 정형화된 회의록 JSON을 생성하는 전문가입니다.
@@ -11,7 +21,6 @@ _SYSTEM_PROMPT = """\
 
 ## 출력 형식 (JSON only, 다른 텍스트 없이)
 
-```json
 {
   "회의명": "회의 제목",
   "일시 및 장소": "날짜 및 시간 / 장소",
@@ -32,7 +41,6 @@ _SYSTEM_PROMPT = """\
     "담당자 – 업무 내용 (기한)"
   ]
 }
-```
 
 ## 규칙
 
@@ -44,41 +52,57 @@ _SYSTEM_PROMPT = """\
 """
 
 
+def _get_client() -> AsyncOpenAI:
+    endpoint = os.environ.get("LLM_ENDPOINT", "").strip()
+    token = os.environ.get("LLM_API_TOKEN", "none").strip()
+    if not endpoint:
+        raise EnvironmentError(
+            "LLM_ENDPOINT 환경 변수가 설정되지 않았습니다. "
+            "예: export LLM_ENDPOINT=http://10.0.0.1:8080/v1"
+        )
+    return AsyncOpenAI(base_url=endpoint, api_key=token)
+
+
 def _extract_json(text: str) -> str:
-    """Strip markdown code fences if present and return raw JSON string."""
-    # Remove ```json ... ``` or ``` ... ``` wrappers
+    """마크다운 코드 펜스를 제거하고 순수 JSON 문자열을 반환합니다."""
     match = re.search(r"```(?:json)?\s*([\s\S]*?)```", text)
     if match:
         return match.group(1).strip()
     return text.strip()
 
 
-def text_to_meeting_json(transcript: str) -> dict:
-    """Send the ASR transcript to Claude and return a parsed meeting-minutes dict."""
-    client = anthropic.Anthropic()
+async def text_to_meeting_json(transcript: str) -> dict:
+    """ASR 전사본을 LLM에 전달하고 회의록 JSON dict를 반환합니다."""
+    client = _get_client()
+    model = os.environ.get("LLM_MODEL", "default")
 
-    response = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=4096,
-        system=[
-            {
-                "type": "text",
-                "text": _SYSTEM_PROMPT,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ],
-        messages=[
-            {
-                "role": "user",
-                "content": f"다음 회의 전사본을 분석하여 회의록 JSON을 생성해주세요:\n\n{transcript}",
-            }
-        ],
+    messages = [
+        {"role": "system", "content": _SYSTEM_PROMPT},
+        {
+            "role": "user",
+            "content": f"다음 회의 전사본을 분석하여 회의록 JSON을 생성해주세요:\n\n{transcript}",
+        },
+    ]
+
+    stream = await client.chat.completions.create(
+        model=model,
+        messages=messages,
+        temperature=0.1,
+        max_tokens=32768,
+        stream=True,
     )
 
-    raw = response.content[0].text
-    json_str = _extract_json(raw)
+    full_text = ""
+    async for chunk in stream:
+        delta = chunk.choices[0].delta.content
+        if delta:
+            full_text += delta
+
+    json_str = _extract_json(full_text)
 
     try:
         return json.loads(json_str)
     except json.JSONDecodeError as e:
-        raise ValueError(f"LLM이 유효한 JSON을 반환하지 않았습니다: {e}\n응답:\n{raw}") from e
+        raise ValueError(
+            f"LLM이 유효한 JSON을 반환하지 않았습니다: {e}\n응답:\n{full_text}"
+        ) from e

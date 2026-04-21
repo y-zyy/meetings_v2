@@ -2,21 +2,26 @@
 FastAPI 회의록 자동 생성 파이프라인
 
 흐름:
-  오디오 업로드 → WhisperX (ASR) → Claude API (JSON) → python-docx (DOCX) → 파일 반환
+  오디오 업로드 → WhisperX (ASR) → LLM (JSON) → python-docx (DOCX) → 파일 반환
 
 실행:
   uvicorn main:app --host 0.0.0.0 --port 8000
 
-환경 변수:
-  ANTHROPIC_API_KEY  - Claude API 키 (필수)
-  ASR_DEVICE         - cuda / cpu (기본: cuda)
-  ASR_COMPUTE_TYPE   - float16 / int8 (기본: float16)
-  ASR_BATCH_SIZE     - 배치 크기 (기본: 16)
+환경 변수 (필수):
+  LLM_ENDPOINT   - LLM API 엔드포인트  (예: http://10.0.0.1:8080/v1)
+  LLM_API_TOKEN  - LLM API 인증 토큰
+
+환경 변수 (선택):
+  LLM_MODEL        - 모델 이름 (기본: default)
+  ASR_DEVICE       - cuda / cpu (기본: cuda)
+  ASR_COMPUTE_TYPE - float16 / int8 (기본: float16)
+  ASR_BATCH_SIZE   - 배치 크기 (기본: 16)
 """
 
+import asyncio
 import os
 import tempfile
-import uuid
+from functools import partial
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
@@ -26,7 +31,6 @@ from asr import transcribe_audio
 from generate import build_document
 from llm import text_to_meeting_json
 
-# 지원하는 오디오 확장자
 ALLOWED_EXTENSIONS = {".mp3", ".mp4", ".wav", ".m4a", ".flac", ".ogg", ".webm"}
 
 app = FastAPI(
@@ -50,7 +54,7 @@ async def generate_minutes(audio: UploadFile = File(..., description="회의 녹
     """
     오디오 파일을 받아 다음 순서로 처리합니다:
     1. WhisperX로 음성 → 텍스트 변환
-    2. Claude API로 텍스트 → 회의록 JSON 변환
+    2. LLM (OpenAI 호환 API)으로 텍스트 → 회의록 JSON 변환
     3. python-docx로 JSON → DOCX 변환
     4. DOCX 파일 반환
     """
@@ -71,17 +75,22 @@ async def generate_minutes(audio: UploadFile = File(..., description="회의 녹
             tmp_audio.write(content)
             audio_path = tmp_audio.name
 
-        # ── 2. ASR: 음성 → 텍스트 ─────────────────────────────────────
+        # ── 2. ASR: 음성 → 텍스트 (블로킹 → 스레드풀) ────────────────
         device = os.getenv("ASR_DEVICE", "cuda")
         compute_type = os.getenv("ASR_COMPUTE_TYPE", "float16")
         batch_size = int(os.getenv("ASR_BATCH_SIZE", "16"))
 
         try:
-            transcript = transcribe_audio(
-                audio_path,
-                device=device,
-                batch_size=batch_size,
-                compute_type=compute_type,
+            loop = asyncio.get_event_loop()
+            transcript = await loop.run_in_executor(
+                None,
+                partial(
+                    transcribe_audio,
+                    audio_path,
+                    device=device,
+                    batch_size=batch_size,
+                    compute_type=compute_type,
+                ),
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"음성 인식 중 오류: {e}") from e
@@ -91,7 +100,9 @@ async def generate_minutes(audio: UploadFile = File(..., description="회의 녹
 
         # ── 3. LLM: 텍스트 → 회의록 JSON ─────────────────────────────
         try:
-            meeting_data = text_to_meeting_json(transcript)
+            meeting_data = await text_to_meeting_json(transcript)
+        except EnvironmentError as e:
+            raise HTTPException(status_code=500, detail=str(e)) from e
         except ValueError as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
         except Exception as e:
@@ -116,7 +127,7 @@ async def generate_minutes(audio: UploadFile = File(..., description="회의 녹
             path=docx_path,
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             filename=filename,
-            background=_cleanup_files(audio_path, docx_path),
+            background=_CleanupFiles(audio_path, docx_path),
         )
 
     except HTTPException:
@@ -129,7 +140,7 @@ async def generate_minutes(audio: UploadFile = File(..., description="회의 녹
         raise HTTPException(status_code=500, detail=f"서버 오류: {e}") from e
 
 
-# ── 임시 파일 정리 헬퍼 ───────────────────────────────────────────────
+# ── 임시 파일 정리 ────────────────────────────────────────────────────
 
 def _delete_if_exists(path: str | None):
     if path and os.path.exists(path):
@@ -139,8 +150,8 @@ def _delete_if_exists(path: str | None):
             pass
 
 
-class _cleanup_files:
-    """FileResponse의 background 태스크로 임시 파일을 삭제합니다."""
+class _CleanupFiles:
+    """FileResponse 전송 완료 후 임시 파일을 삭제하는 background 태스크."""
 
     def __init__(self, *paths: str | None):
         self.paths = paths
