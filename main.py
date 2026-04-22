@@ -67,13 +67,27 @@ ALLOWED_EXTENSIONS = {".mp3", ".mp4", ".wav", ".m4a", ".flac", ".ogg", ".webm"}
 # ── 한글 인코딩 복구 ──────────────────────────────────────────────────
 
 def _fix_encoding(value: str | None) -> str | None:
-    """python-multipart가 Latin-1로 잘못 디코딩한 한글을 UTF-8로 복구합니다."""
+    """python-multipart가 잘못 디코딩한 한글을 복구합니다.
+
+    curl이 UTF-8 또는 CP949(한국 Windows 기본값) 바이트를 전송했을 때
+    python-multipart가 latin-1로 해석하면 각 바이트가 그대로 unicode 코드포인트로
+    매핑되어 깨진 문자열이 됩니다.
+    latin-1로 재인코딩해 원본 바이트를 복원한 뒤 UTF-8 → CP949 순으로 디코딩을 시도합니다.
+    """
     if not value:
         return value
+    # latin-1 범위를 벗어난 코드포인트가 있으면 이미 올바른 유니코드
     try:
-        return value.encode("latin-1").decode("utf-8")
-    except (UnicodeDecodeError, UnicodeEncodeError):
+        raw = value.encode("latin-1")
+    except UnicodeEncodeError:
         return value
+    # 원본 바이트를 실제 인코딩으로 디코딩 시도 (UTF-8 우선, CP949 대비)
+    for enc in ("utf-8", "cp949"):
+        try:
+            return raw.decode(enc)
+        except UnicodeDecodeError:
+            continue
+    return value
 
 
 def _fix_encoding_list(values: list[str] | None) -> list[str]:
@@ -150,8 +164,8 @@ async def generate_minutes(
         "안건": agenda,
     }
 
-    logger.info("[API] 요청 수신: 파일=%s, 회의명=%s, 안건 수=%d",
-                audio.filename, title or "(없음)", len(agenda))
+    logger.info("[API] 요청 수신: 파일=%s, 회의명=%r, 일시=%r, 장소=%r, 참석자=%r, 안건=%r",
+                audio.filename, title, date_time, location, participants, agenda)
 
     audio_path: str | None = None
 
@@ -205,10 +219,15 @@ async def generate_minutes(
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"문서 생성 중 오류: {e}") from e
 
+        # ZIP 내부 파일명은 ASCII만 사용한다.
+        # Python zipfile은 한글 파일명에 UTF-8 플래그를 설정하지만,
+        # Windows Explorer 구버전 / 일부 압축 툴이 이를 무시하고
+        # CP437로 잘못 해석해 파일명이 깨진다.
+        # 다운로드 파일명은 Content-Disposition 헤더로 별도 제공한다.
         zip_buf = io.BytesIO()
         with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr("회의록.docx", minutes_buf.read())
-            zf.writestr("음성인식결과.docx", transcript_buf.read())
+            zf.writestr("minutes.docx", minutes_buf.read())
+            zf.writestr("transcript.docx", transcript_buf.read())
         zip_buf.seek(0)
         logger.info("[STEP 4/4] ZIP 생성 완료, 응답 반환")
 
