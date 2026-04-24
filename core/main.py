@@ -2,10 +2,11 @@
 FastAPI 회의록 자동 생성 파이프라인
 
 흐름:
-  오디오 업로드 → WhisperX (ASR)
-                → LLM ① 회의록 JSON 생성  ┐ (병렬)
-                → LLM ② 전사본 정제       ┘
-                → python-docx × 2 → ZIP 반환
+  오디오 업로드 → Meeting 레코드 생성 → 백그라운드 처리
+    → WhisperX (ASR)
+    → LLM ① 회의록 JSON 생성  ┐ (병렬)
+    → LLM ② 전사본 정제       ┘
+    → DB 저장 (status: completed)
 
 실행:
   uvicorn main:app --host 0.0.0.0 --port 8000
@@ -15,43 +16,36 @@ FastAPI 회의록 자동 생성 파이프라인
   LLM_API_TOKEN                 - LLM API 인증 토큰
 
 환경 변수 (선택):
+  SECRET_KEY                    - JWT 서명 키 (기본: dev 키, 운영 시 반드시 변경)
+  DATABASE_URL                  - DB 연결 문자열 (기본: sqlite+aiosqlite:///./meetings.db)
   LLM_MODEL                     - 모델 이름 (기본: default)
   ASR_DEVICE                    - cuda / cpu (기본: cuda)
   ASR_COMPUTE_TYPE              - float16 / int8 (기본: float16)
   ASR_BATCH_SIZE                - 배치 크기 (기본: 16)
   TRANSCRIPT_REFINE_PROMPT      - 전사본 정제 시스템 프롬프트 (직접 텍스트)
   TRANSCRIPT_REFINE_PROMPT_FILE - 전사본 정제 프롬프트 파일 경로
-
-curl 예시:
-  curl -X POST http://localhost:8000/generate-minutes \\
-    -F "audio=@meeting.mp3" \\
-    -F "title=4분기 로드맵 검토" \\
-    -F "date_time=2024-10-21 14:00~16:00" \\
-    -F "location=본사 3층 대회의실" \\
-    -F "participants=김철수 (PM), 이영희 (개발팀장)" \\
-    -F "agenda=신규 기능 우선순위 조정" \\
-    -F "agenda=UI/UX 개편 방향 확정" \\
-    -o result.zip
 """
 
 import asyncio
-import io
 import logging
 import os
 import tempfile
-import urllib.parse
-import zipfile
 from contextlib import asynccontextmanager
 from functools import partial
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import asr as asr_module
 from asr import transcribe_audio
-from generate import build_document, build_transcript_document
+from auth import get_current_user
+from database import AsyncSessionLocal, get_db, init_db
 from llm import refine_transcript, text_to_meeting_json
+from models import Meeting, User
+from routers.auth import router as auth_router
+from routers.meetings import router as meetings_router
 
 # ── 로깅 설정 ─────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -67,21 +61,13 @@ ALLOWED_EXTENSIONS = {".mp3", ".mp4", ".wav", ".m4a", ".flac", ".ogg", ".webm"}
 # ── 한글 인코딩 복구 ──────────────────────────────────────────────────
 
 def _fix_encoding(value: str | None) -> str | None:
-    """python-multipart가 잘못 디코딩한 한글을 복구합니다.
-
-    curl이 UTF-8 또는 CP949(한국 Windows 기본값) 바이트를 전송했을 때
-    python-multipart가 latin-1로 해석하면 각 바이트가 그대로 unicode 코드포인트로
-    매핑되어 깨진 문자열이 됩니다.
-    latin-1로 재인코딩해 원본 바이트를 복원한 뒤 UTF-8 → CP949 순으로 디코딩을 시도합니다.
-    """
+    """python-multipart가 잘못 디코딩한 한글을 복구합니다."""
     if not value:
         return value
-    # latin-1 범위를 벗어난 코드포인트가 있으면 이미 올바른 유니코드
     try:
         raw = value.encode("latin-1")
     except UnicodeEncodeError:
         return value
-    # 원본 바이트를 실제 인코딩으로 디코딩 시도 (UTF-8 우선, CP949 대비)
     for enc in ("utf-8", "cp949"):
         try:
             return raw.decode(enc)
@@ -96,11 +82,71 @@ def _fix_encoding_list(values: list[str] | None) -> list[str]:
     return [_fix_encoding(v) or v for v in values]
 
 
+# ── 백그라운드 처리 ───────────────────────────────────────────────────
+
+async def _process_meeting_bg(meeting_id: int, audio_path: str, metadata: dict) -> None:
+    """ASR + LLM 처리 후 DB를 갱신하는 백그라운드 태스크."""
+    async with AsyncSessionLocal() as db:
+        try:
+            meeting = await db.get(Meeting, meeting_id)
+            if not meeting:
+                return
+
+            meeting.status = "processing"
+            await db.commit()
+            logger.info("[BG] 처리 시작: meeting_id=%d", meeting_id)
+
+            # ASR
+            try:
+                loop = asyncio.get_running_loop()
+                transcript: str = await loop.run_in_executor(None, transcribe_audio, audio_path)
+            except Exception as e:
+                raise RuntimeError(f"음성 인식 중 오류: {e}") from e
+
+            if not transcript.strip():
+                raise ValueError("음성에서 텍스트를 인식하지 못했습니다.")
+
+            meeting.raw_transcript = transcript
+            await db.commit()
+            logger.info("[BG] ASR 완료: meeting_id=%d, %d자", meeting_id, len(transcript))
+
+            # LLM (병렬)
+            meeting_data, refined_text = await asyncio.gather(
+                text_to_meeting_json(transcript, metadata),
+                refine_transcript(transcript, metadata),
+            )
+
+            meeting.meeting_json = meeting_data
+            meeting.refined_transcript = refined_text
+            meeting.status = "completed"
+            await db.commit()
+            logger.info("[BG] 처리 완료: meeting_id=%d", meeting_id)
+
+        except Exception as e:
+            logger.exception("[BG] 처리 실패: meeting_id=%d", meeting_id)
+            await db.rollback()
+            try:
+                meeting = await db.get(Meeting, meeting_id)
+                if meeting:
+                    meeting.status = "failed"
+                    meeting.error_message = str(e)[:500]
+                    await db.commit()
+            except Exception:
+                logger.exception("[BG] 오류 상태 저장 실패: meeting_id=%d", meeting_id)
+        finally:
+            if os.path.exists(audio_path):
+                try:
+                    os.unlink(audio_path)
+                except OSError:
+                    pass
+
+
 # ── 서버 수명 주기 ────────────────────────────────────────────────────
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """서버 시작 시 Whisper 모델을 GPU에 로드하고, 종료 시까지 유지합니다."""
+    await init_db()
+
     device = os.getenv("ASR_DEVICE", "cuda")
     compute_type = os.getenv("ASR_COMPUTE_TYPE", "float16")
     batch_size = int(os.getenv("ASR_BATCH_SIZE", "16"))
@@ -111,38 +157,54 @@ async def lifespan(app: FastAPI):
         partial(asr_module.init_model, device, compute_type, batch_size),
     )
 
-    yield  # 서버 실행 중
+    yield
 
 
 app = FastAPI(
     title="회의록 자동 생성 API",
-    description="음성 파일을 업로드하면 회의록과 음성인식 결과 DOCX 2개가 담긴 ZIP을 반환합니다.",
-    version="2.0.0",
+    description="음성 파일을 업로드하면 AI가 회의록을 자동으로 생성합니다.",
+    version="2.1.0",
     lifespan=lifespan,
 )
+
+# ── CORS ──────────────────────────────────────────────────────────────
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ── 라우터 등록 ───────────────────────────────────────────────────────
+app.include_router(auth_router)
+app.include_router(meetings_router)
 
 
 # ── 엔드포인트 ────────────────────────────────────────────────────────
 
-@app.get("/health")
+@app.get("/health", tags=["system"])
 def health():
     return {"status": "ok"}
 
 
 @app.post(
     "/generate-minutes",
-    summary="음성 → 회의록 + 음성인식결과 ZIP 생성",
-    response_description="회의록.docx + 음성인식결과.docx 가 담긴 ZIP 파일",
+    summary="음성 → 회의록 생성 (비동기)",
+    response_description="생성된 회의 ID를 즉시 반환하고, 처리는 백그라운드에서 진행됩니다.",
+    tags=["meetings"],
 )
 async def generate_minutes(
+    background_tasks: BackgroundTasks,
     audio: UploadFile = File(..., description="회의 녹음 파일"),
     title: str | None = Form(default=None, description="회의명"),
-    date_time: str | None = Form(default=None, description="일시 (예: 2024-10-21 14:00~16:00)"),
+    date_time: str | None = Form(default=None, description="일시"),
     location: str | None = Form(default=None, description="장소"),
-    participants: str | None = Form(default=None, description="참석자 (쉼표 구분)"),
+    participants: str | None = Form(default=None, description="참석자"),
     agenda: list[str] | None = Form(default=None, description="안건 (여러 번 입력 가능)"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
-    # ── 한글 인코딩 복구 ───────────────────────────────────────────────
     title = _fix_encoding(title)
     date_time = _fix_encoding(date_time)
     location = _fix_encoding(location)
@@ -156,6 +218,25 @@ async def generate_minutes(
             detail=f"지원하지 않는 파일 형식입니다. 지원 형식: {', '.join(ALLOWED_EXTENSIONS)}",
         )
 
+    # 오디오 임시 저장
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(await audio.read())
+        audio_path = tmp.name
+
+    # Meeting 레코드 생성
+    meeting = Meeting(
+        user_id=current_user.id,
+        title=title or "(제목 없음)",
+        date_time=date_time,
+        location=location,
+        participants=participants,
+        agenda=agenda or [],
+        status="pending",
+    )
+    db.add(meeting)
+    await db.commit()
+    await db.refresh(meeting)
+
     metadata = {
         "회의명": title or "",
         "일시": date_time or "",
@@ -164,90 +245,11 @@ async def generate_minutes(
         "안건": agenda,
     }
 
-    logger.info("[API] 요청 수신: 파일=%s, 회의명=%r, 일시=%r, 장소=%r, 참석자=%r, 안건=%r",
-                audio.filename, title, date_time, location, participants, agenda)
+    background_tasks.add_task(_process_meeting_bg, meeting.id, audio_path, metadata)
 
-    audio_path: str | None = None
+    logger.info(
+        "[API] 회의 생성: meeting_id=%d, user_id=%d, file=%s",
+        meeting.id, current_user.id, audio.filename,
+    )
 
-    try:
-        # ── STEP 1/4 오디오 저장 ──────────────────────────────────────
-        logger.info("[STEP 1/4] 오디오 임시 저장 시작")
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            tmp.write(await audio.read())
-            audio_path = tmp.name
-        logger.info("[STEP 1/4] 오디오 임시 저장 완료: %s", audio_path)
-
-        # ── STEP 2/4 ASR ──────────────────────────────────────────────
-        logger.info("[STEP 2/4] ASR(음성→텍스트) 시작")
-        try:
-            loop = asyncio.get_event_loop()
-            transcript: str = await loop.run_in_executor(
-                None, transcribe_audio, audio_path
-            )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"음성 인식 중 오류: {e}") from e
-
-        if not transcript.strip():
-            raise HTTPException(status_code=422, detail="음성에서 텍스트를 인식하지 못했습니다.")
-        logger.info("[STEP 2/4] ASR 완료: %d자 전사", len(transcript))
-
-        # ── STEP 3/4 LLM (회의록 JSON + 전사본 정제 병렬 실행) ────────
-        logger.info("[STEP 3/4] LLM 처리 시작 (회의록 JSON 생성 + 전사본 정제 병렬)")
-        try:
-            meeting_data, refined_text = await asyncio.gather(
-                text_to_meeting_json(transcript, metadata),
-                refine_transcript(transcript, metadata),
-            )
-        except EnvironmentError as e:
-            raise HTTPException(status_code=500, detail=str(e)) from e
-        except ValueError as e:
-            raise HTTPException(status_code=500, detail=str(e)) from e
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"LLM 처리 중 오류: {e}") from e
-        logger.info("[STEP 3/4] LLM 처리 완료")
-
-        # ── STEP 4/4 DOCX 생성 및 ZIP 반환 ───────────────────────────
-        logger.info("[STEP 4/4] DOCX 생성 시작")
-        try:
-            minutes_buf = io.BytesIO()
-            build_document(meeting_data).save(minutes_buf)
-            minutes_buf.seek(0)
-
-            transcript_buf = io.BytesIO()
-            build_transcript_document(refined_text, metadata).save(transcript_buf)
-            transcript_buf.seek(0)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"문서 생성 중 오류: {e}") from e
-
-        # ZIP 내부 파일명은 ASCII만 사용한다.
-        # Python zipfile은 한글 파일명에 UTF-8 플래그를 설정하지만,
-        # Windows Explorer 구버전 / 일부 압축 툴이 이를 무시하고
-        # CP437로 잘못 해석해 파일명이 깨진다.
-        # 다운로드 파일명은 Content-Disposition 헤더로 별도 제공한다.
-        zip_buf = io.BytesIO()
-        with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr("minutes.docx", minutes_buf.read())
-            zf.writestr("transcript.docx", transcript_buf.read())
-        zip_buf.seek(0)
-        logger.info("[STEP 4/4] ZIP 생성 완료, 응답 반환")
-
-        zip_filename = f"{title or '회의'}_결과.zip"
-        encoded_filename = urllib.parse.quote(zip_filename)
-
-        return StreamingResponse(
-            zip_buf,
-            media_type="application/zip",
-            headers={
-                "Content-Disposition": (
-                    f"attachment; filename=\"result.zip\"; "
-                    f"filename*=UTF-8''{encoded_filename}"
-                )
-            },
-        )
-
-    finally:
-        if audio_path and os.path.exists(audio_path):
-            try:
-                os.unlink(audio_path)
-            except OSError:
-                pass
+    return {"meeting_id": meeting.id}
