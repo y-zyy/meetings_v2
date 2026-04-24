@@ -49,6 +49,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 
 import asr as asr_module
+from database import init_db
 from asr import transcribe_audio
 from generate import build_document, build_transcript_document
 from llm import refine_transcript, text_to_meeting_json
@@ -104,6 +105,8 @@ async def lifespan(app: FastAPI):
     device = os.getenv("ASR_DEVICE", "cuda")
     compute_type = os.getenv("ASR_COMPUTE_TYPE", "float16")
     batch_size = int(os.getenv("ASR_BATCH_SIZE", "16"))
+
+    await init_db()
 
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(

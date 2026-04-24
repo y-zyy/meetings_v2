@@ -4,3 +4,9 @@ python-multipart>=0.0.9
 whisperx
 openai>=1.30.0
 python-docx>=1.1.0
+# DB
+sqlalchemy>=2.0.0
+aiosqlite>=0.19.0
+# Auth (2단계에서 사용)
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
