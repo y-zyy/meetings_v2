@@ -45,6 +45,7 @@ class Meeting(Base):
     refined_transcript: Mapped[str | None] = mapped_column(Text, nullable=True)
     meeting_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now, onupdate=_now)
 
