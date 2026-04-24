@@ -36,6 +36,8 @@ from pathlib import Path
 
 from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import asr as asr_module
@@ -182,6 +184,20 @@ app.include_router(meetings_router)
 
 
 # ── 엔드포인트 ────────────────────────────────────────────────────────
+
+_FRONTEND_DIR = Path(__file__).parent.parent / "service" / "frontend"
+
+if _FRONTEND_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(_FRONTEND_DIR)), name="frontend_static")
+
+
+@app.get("/", include_in_schema=False)
+def serve_frontend():
+    index = _FRONTEND_DIR / "web_service.html"
+    if index.exists():
+        return FileResponse(str(index))
+    return {"message": "프론트엔드 파일을 찾을 수 없습니다."}
+
 
 @app.get("/health", tags=["system"])
 def health():
