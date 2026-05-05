@@ -14,8 +14,9 @@
   --sidebar-bg:#1B1464;
   --red:#ef4444;--red-d:#fef2f2;
   --amber:#f59e0b;--amber-d:#fffbeb;
+  --green:#22c55e;
   --sidebar-w:120px;
-  --font:'Noto Sans KR','Apple SD Gothic Neo','AppleGothic','KoPubWorldDotum Medium','나눔고딕','NanumGothic','돋움','Dotum',sans-serif;
+  --font:'Noto Sans KR','Apple SD Gothic Neo','AppleGothic','나눔고딕','NanumGothic','돋움','Dotum',sans-serif;
   --mono:'Courier New','D2Coding',monospace;
   --r:10px;--rs:6px;
   --shadow:0 1px 3px rgba(0,0,0,.06);
@@ -29,12 +30,16 @@ input,select,textarea{font-family:var(--font);}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
 
+/* LOGIN OVERLAY */
+#login-overlay{position:fixed;inset:0;z-index:1000;background:rgba(27,20,100,.97);display:flex;align-items:center;justify-content:center;}
+#login-overlay.hidden{display:none;}
+.login-box{background:#fff;border-radius:16px;padding:36px 40px;width:380px;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.login-logo{font-size:22px;font-weight:800;letter-spacing:2px;font-family:'Arial Black','Arial',sans-serif;text-transform:uppercase;margin-bottom:4px;}
+.login-sub{font-size:10px;font-weight:600;letter-spacing:2.5px;color:#1B1464;margin-bottom:28px;font-family:Arial,sans-serif;text-transform:uppercase;}
+.login-err{font-size:12px;color:var(--red);margin-bottom:10px;min-height:18px;}
+
 /* SIDEBAR */
-.sidebar{width:var(--sidebar-w);flex-shrink:0;background:#1B1464;border-right:none;display:flex;flex-direction:column;align-items:stretch;height:100%;padding:12px 0 16px;gap:2px;z-index:50;}
-.company-logo-slot{width:44px;height:44px;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;flex-shrink:0;cursor:pointer;position:relative;}
-.company-logo-slot img{width:100%;height:100%;object-fit:contain;}
-.logo-placeholder{width:44px;height:44px;border-radius:8px;background:rgba(255,255,255,.12);border:1.5px dashed rgba(255,255,255,.3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;}
-.logo-placeholder span{font-size:7px;font-weight:800;color:rgba(255,255,255,.6);letter-spacing:.04em;line-height:1.2;text-align:center;}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;background:#1B1464;display:flex;flex-direction:column;align-items:stretch;height:100%;padding:12px 0 16px;gap:2px;z-index:50;}
 .sb-item{width:calc(100% - 16px);margin:0 8px;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;padding:9px 12px;border-radius:var(--rs);cursor:pointer;border:none;background:none;transition:background .12s;color:rgba(255,255,255,.5);}
 .sb-item:hover{background:rgba(255,255,255,.12);color:rgba(255,255,255,.85);}
 .sb-item.active{background:rgba(255,255,255,.2);color:#fff;}
@@ -46,13 +51,6 @@ input,select,textarea{font-family:var(--font);}
 /* MAIN */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
 .topbar{height:110px;display:flex;align-items:center;padding:0 28px 0 16px;gap:12px;flex-shrink:0;border-bottom:1px solid var(--border);}
-.search-wrap{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:7px 14px;width:280px;transition:all .15s;}
-.search-wrap:focus-within{border-color:var(--accent);background:var(--bg);box-shadow:0 0 0 3px var(--accent-d);}
-.search-wrap svg{width:14px;height:14px;color:var(--text3);flex-shrink:0;}
-.search-wrap input{border:none;background:none;outline:none;font-size:13px;color:var(--text);width:100%;}
-.search-wrap input::placeholder{color:var(--text3);}
-.page-brand{font-size:22px;font-weight:700;color:var(--text);letter-spacing:-.5px;white-space:nowrap;}
-.avatar{width:30px;height:30px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;cursor:pointer;flex-shrink:0;}
 
 /* PAGES */
 .content{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
@@ -67,9 +65,7 @@ input,select,textarea{font-family:var(--font);}
 .list-tab+.list-tab{margin-left:20px;}
 .meeting-table-wrap{flex:1;overflow-y:auto;padding:0 28px 24px;}
 .meeting-table{width:100%;border-collapse:collapse;margin-top:4px;}
-.meeting-table th{text-align:left;padding:9px 12px;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;user-select:none;}
-.meeting-table th.sortable{cursor:pointer;}
-.meeting-table th.sortable:hover{color:var(--text2);}
+.meeting-table th{text-align:left;padding:9px 12px;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;}
 .meeting-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text2);vertical-align:middle;}
 .meeting-table tr:last-child td{border-bottom:none;}
 .meeting-table tbody tr{transition:background .08s;cursor:pointer;}
@@ -77,17 +73,11 @@ input,select,textarea{font-family:var(--font);}
 td.col-name{color:var(--text);font-weight:400;width:100%;}
 td.col-dur{font-variant-numeric:tabular-nums;white-space:nowrap;width:1%;}
 td.col-date{color:var(--text3);white-space:nowrap;width:1%;}
-.row-check{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;flex-shrink:0;}
-.row-check.checked{background:var(--accent);border-color:var(--accent);}
-.row-check.checked::after{content:'✓';font-size:9px;color:#fff;font-weight:700;}
-th.col-name{width:100%;}
-th.col-dur,th.col-date{white-space:nowrap;width:1%;}
-.folder-chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--text2);}
-.folder-chip svg{width:13px;height:13px;color:var(--text3);}
 .badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap;}
 .b-done{background:var(--accent-d);color:var(--accent2);}
 .b-proc{background:#fffbeb;color:#b45309;}
-.b-edit{background:#f1f5f9;color:#475569;}
+.b-fail{background:var(--red-d);color:var(--red);}
+.b-queue{background:#f1f5f9;color:#475569;}
 .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);gap:10px;padding:60px 0;}
 .empty-state svg{width:48px;height:48px;opacity:.25;}
 .empty-state p{font-size:14px;}
@@ -132,14 +122,18 @@ select.input{appearance:none;cursor:pointer;}
 .btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2);}
 .btn-ghost:hover{background:var(--bg3);color:var(--text);}
 .btn-sm{padding:5px 12px;font-size:12px;}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+
+/* UPLOAD PROGRESS */
+.upload-prog-wrap{margin-top:12px;}
+.prog-track{background:var(--bg3);border-radius:20px;height:6px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:20px;transition:width .3s;}
+.p-accent{background:var(--accent);}
+.p-blue{background:#4285f4;}
 
 /* PROCESSING */
 .proc-wrap{flex:1;display:flex;align-items:center;justify-content:center;}
 .proc-card{width:520px;}
-.prog-track{background:var(--bg3);border-radius:20px;height:6px;overflow:hidden;}
-.prog-fill{height:100%;border-radius:20px;transition:width .4s;}
-.p-accent{background:var(--accent);}
-.p-blue{background:#4285f4;}
 .terminal{background:#1a1d23;border-radius:var(--rs);padding:12px 14px;font-family:var(--mono);font-size:11px;line-height:1.8;max-height:160px;overflow-y:auto;color:#8b95aa;margin-top:14px;}
 .log-ok{color:#2dd4bf;}.log-info{color:#4285f4;}.log-t{color:#4d5a70;}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -170,7 +164,6 @@ select.input{appearance:none;cursor:pointer;}
 .stat-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow);}
 .stat-value{font-size:24px;font-weight:700;line-height:1.1;}
 .stat-label{font-size:11px;color:var(--text2);margin-top:4px;}
-.engine-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg2);border-radius:var(--rs);margin-bottom:7px;}
 
 /* MODAL */
 .modal-bg{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.25);align-items:center;justify-content:center;}
@@ -190,7 +183,7 @@ select.input{appearance:none;cursor:pointer;}
 
 /* PAGINATION */
 .pagination{display:flex;justify-content:center;gap:4px;padding:12px 0;}
-.pg-btn{width:30px;height:30px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--bg);color:var(--text2);cursor:pointer;transition:all .12px;}
+.pg-btn{width:30px;height:30px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--bg);color:var(--text2);cursor:pointer;transition:all .12s;}
 .pg-btn:hover{border-color:var(--accent);color:var(--accent);}
 .pg-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
 .mt12{margin-top:12px}.mb12{margin-bottom:12px}.mb16{margin-bottom:16px}.mb20{margin-bottom:20px}
@@ -198,7 +191,19 @@ select.input{appearance:none;cursor:pointer;}
 </head>
 <body>
 
-<!-- 전체 너비 topbar -->
+<!-- ── LOGIN OVERLAY ────────────────────────────────────────────────────── -->
+<div id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo"><span style="color:#1B1464;">KA</span><span style="color:#8a8a8a;">I</span><span style="color:#1B1464;"> MEET</span><span style="color:#8a8a8a;">I</span><span style="color:#1B1464;">NGS</span></div>
+    <div class="login-sub">Korea Aerospace Industries, Ltd.</div>
+    <div class="field"><div class="field-label">아이디</div><input class="input" id="login-username" placeholder="사용자 이름" autocomplete="username"></div>
+    <div class="field"><div class="field-label">비밀번호</div><input class="input" id="login-password" type="password" placeholder="비밀번호" autocomplete="current-password"></div>
+    <div class="login-err" id="login-err"></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()">로그인</button>
+  </div>
+</div>
+
+<!-- ── TOPBAR ────────────────────────────────────────────────────────────── -->
 <header class="topbar" style="padding:0 28px 0 16px;border-bottom:1px solid var(--border);">
   <div style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.2;gap:3px;">
     <div style="font-size:28px;font-weight:800;letter-spacing:2px;font-family:'Arial Black','Arial',sans-serif;text-transform:uppercase;line-height:1;white-space:nowrap;">
@@ -206,44 +211,31 @@ select.input{appearance:none;cursor:pointer;}
     </div>
     <div style="font-size:11px;font-weight:600;letter-spacing:2.5px;color:#1B1464;font-family:'Arial',sans-serif;text-transform:uppercase;white-space:nowrap;">KOREA AEROSPACE INDUSTRIES, LTD.</div>
   </div>
+  <div style="flex:1;"></div>
+  <div style="font-size:12px;color:var(--text2);" id="topbar-user"></div>
+  <button class="btn btn-ghost btn-sm" onclick="doLogout()">로그아웃</button>
 </header>
 
 <div class="layout-body">
 
-<aside class="sidebar" style="padding-top:8px;overflow:hidden;">
-  <input type="file" id="logo-file-input" accept="image/*" style="display:none" onchange="loadLogo(this)">
-
-  <button class="sb-item" onclick="setNav(this,'new')" title="새 회의" style="margin-top:0;">
+<aside class="sidebar" style="padding-top:8px;">
+  <button class="sb-item" onclick="setNav(this,'new')" title="새 회의">
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="8"/><path d="M10 6v8M6 10h8"/></svg>
     <span>새 회의</span>
   </button>
-
-  <button class="sb-item active" onclick="setNav(this,'my')" title="회의 목록" style="margin-top:4px;">
+  <button class="sb-item active" onclick="setNav(this,'my')" title="회의 목록">
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="3"/><path d="M7 8h6M7 12h4"/></svg>
     <span>회의 목록</span>
   </button>
-
   <div class="sb-spacer"></div>
-
   <div class="sb-bottom">
-    <button class="sb-item" onclick="toast('사용 가이드 준비 중입니다.','info')" title="사용 가이드">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2z"/><path d="M10 10.5v-1a2 2 0 10-2-2"/><circle cx="10" cy="13.5" r=".75" fill="currentColor" stroke="none"/></svg>
-      <span>가이드</span>
-    </button>
-    <button class="sb-item" onclick="toast('새로운 공지사항이 없습니다.','info')" title="공지사항">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13V7a6 6 0 1112 0v6l2 2H2l2-2z"/><path d="M8 15a2 2 0 004 0"/></svg>
-      <span>공지사항</span>
-    </button>
-    <button class="sb-item" onclick="setNav(this,'admin')" title="설정">
+    <button class="sb-item" id="sb-admin" onclick="setNav(this,'admin')" title="관리자" style="display:none;">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8.325 2.317a.75.75 0 01.734-.617h1.882a.75.75 0 01.734.617l.18 1.044a5.96 5.96 0 011.4.813l1-.377a.75.75 0 01.916.3l.941 1.63a.75.75 0 01-.163.97l-.824.7a6.02 6.02 0 010 1.606l.824.7a.75.75 0 01.163.97l-.94 1.63a.75.75 0 01-.917.3l-1-.377a5.96 5.96 0 01-1.4.813l-.18 1.044a.75.75 0 01-.734.617H9.06a.75.75 0 01-.734-.617l-.18-1.044a5.96 5.96 0 01-1.4-.813l-1 .377a.75.75 0 01-.917-.3l-.94-1.63a.75.75 0 01.163-.97l.824-.7a6.02 6.02 0 010-1.606l-.824-.7a.75.75 0 01-.163-.97l.94-1.63a.75.75 0 01.917-.3l1 .377a5.96 5.96 0 011.4-.813l.18-1.044z"/><circle cx="10" cy="10" r="2.25"/></svg>
-      <span>설정</span>
+      <span>관리자</span>
     </button>
-    <div style="width:calc(100% - 16px);margin:6px 8px 0;background:rgba(255,255,255,.15);border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;cursor:pointer;" title="홍길동">
-      <div style="width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;">홍</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">홍길동</div>
-        <div style="font-size:9px;color:rgba(255,255,255,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">관리자</div>
-      </div>
+    <div style="width:calc(100% - 16px);margin:6px 8px 0;background:rgba(255,255,255,.15);border-radius:8px;padding:8px 12px;" id="sb-user-card">
+      <div style="font-size:11px;font-weight:700;color:#fff;" id="sb-fullname">-</div>
+      <div style="font-size:9px;color:rgba(255,255,255,.5);" id="sb-role">-</div>
     </div>
   </div>
 </aside>
@@ -251,50 +243,38 @@ select.input{appearance:none;cursor:pointer;}
 <div class="main">
   <div class="content">
 
-    <!-- 내 회의 -->
+    <!-- ── 회의 목록 ──────────────────────────────────────────────────────── -->
     <div id="page-my" class="page active">
       <div style="padding:0 28px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;">
         <div style="display:flex;align-items:center;">
-          <button class="list-tab active" onclick="switchTab(this,'tab-recent')">나의 회의 목록</button>
+          <button class="list-tab active">나의 회의 목록</button>
         </div>
-        <div class="search-wrap" style="width:240px;margin:6px 0;">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg>
-          <input placeholder="검색어를 입력해 주세요" id="search-input" oninput="filterList()">
+        <div style="display:flex;align-items:center;gap:8px;margin:6px 0;">
+          <div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:7px 14px;">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" width="14" height="14"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg>
+            <input placeholder="검색어를 입력해 주세요" id="search-input" oninput="scheduleSearch()" style="border:none;background:none;outline:none;font-size:13px;color:var(--text);width:200px;font-family:var(--font);">
+          </div>
         </div>
       </div>
-      <div id="tab-recent" class="meeting-table-wrap">
+      <div class="meeting-table-wrap" id="list-wrap">
         <table class="meeting-table" id="list-table">
-          <thead>
-            <tr>
-              <th class="col-check"><div class="row-check" id="check-all" onclick="toggleAllCheck(this)"></div></th>
-              <th class="col-name">회의 이름</th>
-              <th class="sortable col-dur">길이 <span style="color:var(--text3)">↕</span></th>
-              <th class="sortable col-date">생성일 <span style="color:var(--text3)">↓</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr onclick="gotoDetail()"><td class="col-check" onclick="event.stopPropagation()"><div class="row-check" onclick="toggleCheck(this)"></div></td><td class="col-name">2025 Q1 전략 기획 회의</td><td class="col-dur">1:12:04</td><td class="col-date">2025. 3. 14. 오후 2:00</td></tr>
-            <tr onclick="gotoDetail()"><td class="col-check" onclick="event.stopPropagation()"><div class="row-check" onclick="toggleCheck(this)"></div></td><td class="col-name">신규 서비스 UX 리뷰</td><td class="col-dur">0:48:22</td><td class="col-date">2025. 3. 13. 오전 10:30</td></tr>
-            <tr onclick="gotoDetail()"><td class="col-check" onclick="event.stopPropagation()"><div class="row-check" onclick="toggleCheck(this)"></div></td><td class="col-name">보안 취약점 점검 회의</td><td class="col-dur">2:05:17</td><td class="col-date">2025. 3. 13. 오후 3:00</td></tr>
-            <tr onclick="gotoDetail()"><td class="col-check" onclick="event.stopPropagation()"><div class="row-check" onclick="toggleCheck(this)"></div></td><td class="col-name">인프라 이관 계획 논의</td><td class="col-dur">0:35:08</td><td class="col-date">2025. 3. 12. 오후 1:00</td></tr>
-            <tr onclick="gotoDetail()"><td class="col-check" onclick="event.stopPropagation()"><div class="row-check" onclick="toggleCheck(this)"></div></td><td class="col-name">HR 정책 변경 안내</td><td class="col-dur">1:28:44</td><td class="col-date">2025. 3. 11. 오전 10:00</td></tr>
-            <tr onclick="gotoDetail()"><td class="col-check" onclick="event.stopPropagation()"><div class="row-check" onclick="toggleCheck(this)"></div></td><td class="col-name">팀 OKR 설정 워크숍</td><td class="col-dur">3:10:02</td><td class="col-date">2025. 3. 10. 오후 2:00</td></tr>
-            <tr onclick="gotoDetail()"><td class="col-check" onclick="event.stopPropagation()"><div class="row-check" onclick="toggleCheck(this)"></div></td><td class="col-name">월간 전사 회의 (3월)</td><td class="col-dur">2:44:18</td><td class="col-date">2025. 3. 7. 오전 9:00</td></tr>
-          </tbody>
+          <thead><tr>
+            <th class="col-name">회의 이름</th>
+            <th class="col-dur">길이</th>
+            <th class="col-date">생성일</th>
+            <th style="width:80px">상태</th>
+          </tr></thead>
+          <tbody id="list-tbody"></tbody>
         </table>
-        <div class="pagination"><div class="pg-btn">‹</div><div class="pg-btn active">1</div><div class="pg-btn">2</div><div class="pg-btn">3</div><div class="pg-btn">›</div></div>
-      </div>
-      <div id="tab-shared" style="display:none" class="meeting-table-wrap"><div class="empty-state"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M32 8H16a4 4 0 00-4 4v24a4 4 0 004 4h16a4 4 0 004-4V12a4 4 0 00-4-4zM16 20h16M16 28h10"/></svg><p>공유 받은 회의가 없습니다.</p></div></div>
-      <div id="tab-processing" style="display:none" class="meeting-table-wrap">
-        <table class="meeting-table"><thead><tr><th class="col-check"></th><th>보드 이름</th><th>진행 상태</th><th>폴더 위치</th><th class="sortable">생성일</th><th style="width:80px"></th></tr></thead>
-        <tbody>
-          <tr><td class="col-check"></td><td class="col-name">인프라 이관 계획 논의</td><td style="min-width:160px"><div style="display:flex;flex-direction:column;gap:4px"><div class="prog-track"><div class="prog-fill p-accent" style="width:68%"></div></div><div style="font-size:10px;color:var(--text3)" class="pulse">ASR 처리 중 68%</div></div></td><td class="col-folder"><span class="folder-chip"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 3h4l1 1.5h5v7H2z"/></svg>기본 폴더</span></td><td class="col-date">2025. 3. 12.</td><td><span class="badge b-proc">ASR</span></td></tr>
-          <tr><td class="col-check"></td><td class="col-name">팀 OKR 설정 워크숍</td><td><div style="display:flex;flex-direction:column;gap:4px"><div class="prog-track"><div class="prog-fill p-blue" style="width:42%"></div></div><div style="font-size:10px;color:var(--text3)" class="pulse">회의록 생성 중 42%</div></div></td><td class="col-folder"><span class="folder-chip"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 3h4l1 1.5h5v7H2z"/></svg>기본 폴더</span></td><td class="col-date">2025. 3. 12.</td><td><span class="badge b-proc">LLM</span></td></tr>
-        </tbody></table>
+        <div class="empty-state" id="list-empty" style="display:none;">
+          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M32 8H16a4 4 0 00-4 4v24a4 4 0 004 4h16a4 4 0 004-4V12a4 4 0 00-4-4zM16 20h16M16 28h10"/></svg>
+          <p>회의가 없습니다. 새 회의를 만들어보세요.</p>
+        </div>
+        <div class="pagination" id="list-pagination"></div>
       </div>
     </div>
 
-    <!-- 새 회의 -->
+    <!-- ── 새 회의 ────────────────────────────────────────────────────────── -->
     <div id="page-new" class="page">
       <div class="new-page-wrap">
         <div class="new-page-title">새 회의록 만들기</div>
@@ -311,11 +291,10 @@ select.input{appearance:none;cursor:pointer;}
 
         <!-- STEP 1: 음성 입력 -->
         <div id="step1-area">
-          <!-- 실시간 녹음 -->
           <div class="card mb16">
             <div class="section-label">실시간 녹음</div>
             <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap;">
-              <div style="flex:1;min-width:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 0;">
+              <div style="flex:1;min-width:220px;display:flex;flex-direction:column;align-items:center;padding:28px 0;">
                 <div id="wave-area" class="waveform mb12" style="display:none;height:56px;">
                   <div class="w-bar"></div><div class="w-bar"></div><div class="w-bar"></div><div class="w-bar"></div>
                   <div class="w-bar"></div><div class="w-bar"></div><div class="w-bar"></div><div class="w-bar"></div>
@@ -337,16 +316,14 @@ select.input{appearance:none;cursor:pointer;}
                 <div style="font-size:13px;color:var(--text2);line-height:1.8;">
                   <div style="margin-bottom:8px;">🎙 마이크 버튼을 눌러 회의를 실시간으로 녹음하세요.</div>
                   <div style="margin-bottom:8px;">🔴 녹음 중에는 빨간 버튼과 파형이 표시됩니다.</div>
-                  <div>⏹ 녹음 완료 후 중지 버튼을 누르면 다음 단계로 이동합니다.</div>
+                  <div>⏹ 녹음 완료 후 중지 버튼을 누르면 파일로 저장됩니다.</div>
                 </div>
               </div>
             </div>
           </div>
-
-          <!-- 파일 업로드 -->
           <div class="card">
             <div class="section-label">파일 업로드</div>
-            <div class="upload-zone" onclick="document.getElementById('file-input').click()" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event)">
+            <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event)">
               <div style="font-size:32px;margin-bottom:10px;opacity:.3">🎵</div>
               <div style="font-size:13px;color:var(--text2);font-weight:500;margin-bottom:5px">파일을 드래그하거나 클릭하여 업로드</div>
               <div style="font-size:11px;color:var(--text3)">MP3 · WAV · M4A · WebM · MP4 / 최대 500MB</div>
@@ -379,37 +356,43 @@ select.input{appearance:none;cursor:pointer;}
                 <input class="input" type="date" id="meeting-date">
               </div>
               <div class="field">
-                <div class="field-label">회의 장소 *</div>
-                <input class="input" placeholder="예: 3층 대회의실, 화상회의" required>
+                <div class="field-label">회의 장소</div>
+                <input class="input" id="meeting-location" placeholder="예: 3층 대회의실, 화상회의">
               </div>
               <div class="field">
                 <div class="field-label">언어</div>
-                <select class="input"><option value="ko">한국어</option><option value="en">English</option></select>
+                <select class="input" id="meeting-language"><option value="ko">한국어</option><option value="en">English</option></select>
               </div>
             </div>
             <div class="field" style="margin-top:4px;">
-              <div class="field-label">참석자 *</div>
-              <input class="input" placeholder="홍길동, 김영희, 박민수, 이수진, 최현우" required>
+              <div class="field-label">참석자</div>
+              <input class="input" id="meeting-attendees" placeholder="홍길동, 김영희, 박민수">
             </div>
             <div class="field" style="margin-top:4px;">
               <div class="field-label">회의 안건 <span style="font-size:10px;color:var(--text3);font-weight:400;">(선택 · AI 회의록 생성 시 문맥에 반영됩니다)</span></div>
-              <textarea class="input" rows="4" placeholder="회의에서 다룰 안건을 미리 입력하시면, AI가 해당 내용을 참고하여 보다 정확하고 구조화된 회의록을 생성합니다.&#10;&#10;예) 1. 2025년 Q2 실적 검토 및 목표 수정&#10;     2. 신규 서비스 출시 일정 확정&#10;     3. 부서별 인력 배치 논의"></textarea>
+              <textarea class="input" id="meeting-agenda" rows="4" placeholder="회의에서 다룰 안건을 미리 입력하시면, AI가 해당 내용을 참고하여 보다 정확하고 구조화된 회의록을 생성합니다."></textarea>
             </div>
             <div class="field">
               <div class="field-label">참고 사항 (선택)</div>
-              <textarea class="input" rows="2" placeholder="회의록 작성 시 참고할 내용을 입력하세요."></textarea>
+              <textarea class="input" id="meeting-notes" rows="2" placeholder="회의록 작성 시 참고할 내용을 입력하세요."></textarea>
+            </div>
+            <!-- Upload progress (shown during submit) -->
+            <div id="upload-prog-wrap" style="display:none;margin-bottom:12px;">
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px;">
+                <span>파일 업로드 중...</span><span id="upload-pct">0%</span>
+              </div>
+              <div class="prog-track"><div class="prog-fill p-accent" id="upload-bar" style="width:0%"></div></div>
             </div>
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
               <button class="btn btn-ghost" onclick="goStep1()">← 이전</button>
-              <button class="btn btn-primary" onclick="startProcessing()">AI 처리 시작 →</button>
+              <button class="btn btn-primary" id="submit-btn" onclick="submitMeeting()">AI 처리 시작 →</button>
             </div>
           </div>
         </div>
-
       </div>
     </div>
 
-    <!-- AI 처리 중 -->
+    <!-- ── AI 처리 중 ──────────────────────────────────────────────────────── -->
     <div id="page-processing" class="page">
       <div class="proc-wrap">
         <div class="proc-card card">
@@ -424,41 +407,71 @@ select.input{appearance:none;cursor:pointer;}
             <div class="step-line"></div>
             <div class="step-item"><div class="step-circle">4</div><div class="step-name">결과 확인</div></div>
           </div>
-          <div style="margin-bottom:18px">
+          <div id="proc-status-asr" style="margin-bottom:18px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
-              <div style="display:flex;align-items:center;gap:7px"><span class="spin" style="color:var(--accent)">⟳</span><span style="font-size:13px;font-weight:600">1단계 — 음성 인식 (ASR)</span></div>
-              <span id="stt-pct" style="font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:700">0%</span>
+              <div style="display:flex;align-items:center;gap:7px"><span class="spin" style="color:var(--accent)" id="asr-spinner">⟳</span><span style="font-size:13px;font-weight:600">1단계 — 음성 인식 (ASR)</span></div>
+              <span id="asr-badge" class="badge b-queue">대기 중</span>
             </div>
-            <div class="prog-track" style="height:7px"><div class="prog-fill p-accent" id="stt-bar" style="width:0%"></div></div>
-            <div style="font-size:11px;color:var(--text3);margin-top:5px" id="stt-status">faster-whisper-server 연결 중...</div>
           </div>
-          <div id="llm-section" style="margin-bottom:18px;opacity:.4;transition:opacity .5s">
+          <div id="proc-status-llm" style="margin-bottom:18px;opacity:.4;transition:opacity .4s;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
-              <div style="display:flex;align-items:center;gap:7px"><span id="llm-spin" style="color:var(--text3)">◯</span><span style="font-size:13px;font-weight:600">2단계 — 회의록 생성 (LLM)</span></div>
-              <span id="llm-pct" style="font-family:var(--mono);font-size:12px;color:var(--text3);font-weight:700">대기 중</span>
+              <div style="display:flex;align-items:center;gap:7px"><span style="color:var(--text3)">◯</span><span style="font-size:13px;font-weight:600">2단계 — 회의록 생성 (LLM)</span></div>
+              <span id="llm-badge" class="badge b-queue">대기 중</span>
             </div>
-            <div class="prog-track" style="height:7px"><div class="prog-fill p-blue" id="llm-bar" style="width:0%"></div></div>
-            <div style="font-size:11px;color:var(--text3);margin-top:5px">GPT-OSS-120B via vLLM</div>
           </div>
-          <div class="terminal" id="proc-log"><div><span class="log-t">[--:--:--]</span> <span class="log-info">처리 대기 중...</span></div></div>
-          <div style="margin-top:12px;text-align:center"><button class="btn btn-ghost btn-sm" onclick="showDetail()">완료 후 결과 보기 →</button></div>
+          <div class="terminal" id="proc-log"></div>
+          <div style="margin-top:12px;text-align:center;display:none;" id="proc-done-btn">
+            <button class="btn btn-primary" onclick="openProcessingResult()">결과 확인 →</button>
+          </div>
+          <div style="margin-top:12px;text-align:center;display:none;color:var(--red);font-size:12px;" id="proc-fail-msg"></div>
         </div>
       </div>
     </div>
 
-    <!-- 상세/편집 -->
+    <!-- ── 상세/편집 ──────────────────────────────────────────────────────── -->
     <div id="page-detail" class="page">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;gap:10px">
-        <div><div style="font-size:17px;font-weight:700">2025 Q1 전략 기획 회의</div><div style="font-size:12px;color:var(--text3);margin-top:4px">2025-03-14 · 1시간 12분 · 참석 5명 · ASR 신뢰도 96%</div></div>
-        <div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm" onclick="showExport()">⬇ 내보내기</button><button class="btn btn-primary btn-sm" onclick="saveDoc()">✓ 저장</button></div>
+        <div>
+          <div style="font-size:17px;font-weight:700" id="detail-title">-</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px" id="detail-meta">-</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="showExport()">⬇ 내보내기</button>
+          <button class="btn btn-primary btn-sm" onclick="saveDetail()">✓ 저장</button>
+        </div>
       </div>
       <div class="detail-wrap">
         <div class="detail-content">
-          <div class="card-sm mb12" id="sec-info"><div class="section-label">회의 정보</div><div class="grid2" style="gap:10px"><div class="field"><div class="field-label">회의 제목</div><input class="input" value="2025 Q1 전략 기획 회의"></div><div class="field"><div class="field-label">일시</div><input class="input" value="2025-03-14 14:00"></div><div class="field"><div class="field-label">장소</div><input class="input" value="3층 대회의실"></div><div class="field"><div class="field-label">참석자</div><input class="input" value="홍길동, 김영희, 박민수, 이수진, 최현우"></div></div></div>
-          <div class="card-sm mb12" id="sec-summary"><div class="section-label">주요 내용 요약</div><textarea class="input" rows="3">1분기 실적 검토 결과 매출 목표 대비 103% 달성을 확인하였으며, 2분기 목표를 전분기 대비 15% 상향하기로 합의하였다.</textarea></div>
-          <div class="card-sm mb12" id="sec-decisions"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div class="section-label" style="margin:0">결정 사항</div><button class="btn btn-ghost btn-sm" onclick="addDecision()">+ 추가</button></div><div id="decisions-list"><div class="decision-item">2분기 매출 목표 15% 상향 조정 확정</div><div class="decision-item">신규 서비스 출시일 5월 15일로 확정</div><div class="decision-item">예산 추가 편성 CFO 결재 완료 후 집행</div></div></div>
-          <div class="card-sm mb12" id="sec-actions"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div class="section-label" style="margin:0">액션 아이템</div><button class="btn btn-ghost btn-sm" onclick="addAction()">+ 추가</button></div><div class="action-row"><div class="checkbox checked" onclick="toggleChk(this)">✓</div><div style="flex:1"><div style="font-size:13px;font-weight:500">2분기 세부 목표 문서 작성</div><div style="font-size:11px;color:var(--text3);margin-top:2px">담당: 홍길동 · 기한: 2025-03-21</div></div><span class="badge b-done">완료</span></div><div class="action-row"><div class="checkbox" onclick="toggleChk(this)"></div><div style="flex:1"><div style="font-size:13px;font-weight:500">신규 서비스 릴리즈 체크리스트 배포</div><div style="font-size:11px;color:var(--text3);margin-top:2px">담당: 김영희 · 기한: 2025-03-24</div></div><span class="badge b-proc">진행 중</span></div><div class="action-row"><div class="checkbox" onclick="toggleChk(this)"></div><div style="flex:1"><div style="font-size:13px;font-weight:500">예산안 CFO 결재 요청</div><div style="font-size:11px;color:var(--text3);margin-top:2px">담당: 박민수 · 기한: 2025-03-18</div></div><span class="badge" style="background:var(--red-d);color:var(--red)">지연</span></div></div>
-          <div class="card-sm" id="sec-transcript"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div class="section-label" style="margin:0">발화 기록 (ASR)</div><button class="btn btn-ghost btn-sm">전체 보기</button></div><div class="seg"><div class="spk"><div class="spk-name" style="background:#eef2ff;color:#3730a3">홍길동</div><div class="spk-time">00:00:04</div></div><div class="seg-text">안녕하세요, 오늘 회의를 시작하겠습니다. 먼저 1분기 실적부터 검토해보도록 하겠습니다.</div></div><div class="seg"><div class="spk"><div class="spk-name" style="background:#ecfdf5;color:#065f46">김영희</div><div class="spk-time">00:00:28</div></div><div class="seg-text">네, 영업팀 기준으로는 목표 대비 103% 달성했고요, 특히 3월 마지막 주에 집중적으로 성과가 나왔습니다.</div></div><div class="seg"><div class="spk"><div class="spk-name" style="background:#fffbeb;color:#92400e">박민수</div><div class="spk-time">00:01:12</div></div><div class="seg-text">재무 쪽에서도 비용 절감이 잘 됐습니다. 전체 이익률이 전년 동기 대비 2.3%p 개선됐습니다.</div></div></div>
+          <div class="card-sm mb12" id="sec-info">
+            <div class="section-label">회의 정보</div>
+            <div class="grid2" style="gap:10px">
+              <div class="field"><div class="field-label">회의 제목</div><input class="input" id="d-title"></div>
+              <div class="field"><div class="field-label">일시</div><input class="input" type="date" id="d-date"></div>
+              <div class="field"><div class="field-label">장소</div><input class="input" id="d-location"></div>
+              <div class="field"><div class="field-label">참석자</div><input class="input" id="d-attendees"></div>
+            </div>
+          </div>
+          <div class="card-sm mb12" id="sec-summary">
+            <div class="section-label">주요 내용 요약</div>
+            <textarea class="input" rows="3" id="d-summary"></textarea>
+          </div>
+          <div class="card-sm mb12" id="sec-decisions">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <div class="section-label" style="margin:0">결정 사항</div>
+              <button class="btn btn-ghost btn-sm" onclick="addDecision()">+ 추가</button>
+            </div>
+            <div id="decisions-list"></div>
+          </div>
+          <div class="card-sm mb12" id="sec-actions">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <div class="section-label" style="margin:0">액션 아이템</div>
+            </div>
+            <div id="actions-list"></div>
+          </div>
+          <div class="card-sm" id="sec-transcript">
+            <div class="section-label">발화 기록 (ASR)</div>
+            <div id="transcript-text" style="font-size:13px;color:var(--text);line-height:1.7;white-space:pre-wrap;max-height:400px;overflow-y:auto;"></div>
+          </div>
         </div>
         <div class="detail-sidebar">
           <div class="section-label">목차</div>
@@ -467,167 +480,626 @@ select.input{appearance:none;cursor:pointer;}
           <div class="toc-item" onclick="activeToc(this);document.getElementById('sec-decisions').scrollIntoView({behavior:'smooth'})">✅ 결정 사항</div>
           <div class="toc-item" onclick="activeToc(this);document.getElementById('sec-actions').scrollIntoView({behavior:'smooth'})">⚡ 액션 아이템</div>
           <div class="toc-item" onclick="activeToc(this);document.getElementById('sec-transcript').scrollIntoView({behavior:'smooth'})">🎙 발화 기록</div>
-          <div class="divider"></div>
-          <div class="section-label" style="margin-bottom:5px">ASR 품질</div>
-          <div style="font-size:22px;font-weight:700;color:var(--accent)">96%</div>
-          <div class="prog-track" style="margin-top:6px"><div class="prog-fill p-accent" style="width:96%"></div></div>
         </div>
       </div>
     </div>
 
-    <!-- 관리자 -->
+    <!-- ── 관리자 ──────────────────────────────────────────────────────────── -->
     <div id="page-admin" class="page">
       <div class="admin-wrap">
         <div style="font-size:18px;font-weight:700;margin-bottom:4px">관리자 콘솔</div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:20px">시스템 현황 모니터링 및 설정 관리</div>
-        <div class="grid4 mb16">
-          <div class="stat-card"><div class="stat-value" style="color:#22c55e">정상</div><div class="stat-label">ASR 엔진</div></div>
-          <div class="stat-card"><div class="stat-value" style="color:#22c55e">정상</div><div class="stat-label">LLM 엔진</div></div>
-          <div class="stat-card"><div class="stat-value" style="color:var(--accent)">247</div><div class="stat-label">등록 사용자</div></div>
-          <div class="stat-card"><div class="stat-value" style="color:var(--amber)">1.2 TB</div><div class="stat-label">스토리지</div></div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:20px">시스템 현황</div>
+        <div class="grid4 mb16" id="admin-stats">
+          <div class="stat-card"><div class="stat-value" id="stat-users">-</div><div class="stat-label">등록 사용자</div></div>
+          <div class="stat-card"><div class="stat-value" id="stat-meetings">-</div><div class="stat-label">전체 회의</div></div>
+          <div class="stat-card"><div class="stat-value" id="stat-processing">-</div><div class="stat-label">처리 중</div></div>
+          <div class="stat-card"><div class="stat-value" id="stat-storage">-</div><div class="stat-label">스토리지</div></div>
         </div>
-        <div class="grid2">
-          <div class="card"><div class="section-label">AI 엔진 연동 현황</div><div class="engine-row"><div><div style="font-size:12px;font-weight:600">ASR — faster-whisper-server</div><div style="font-family:var(--mono);font-size:10px;color:var(--text3)">http://asr-server:9000</div></div><span class="badge b-done">● 연결됨</span></div><div class="engine-row"><div><div style="font-size:12px;font-weight:600">LLM — GPT-OSS-120B (vLLM)</div><div style="font-family:var(--mono);font-size:10px;color:var(--text3)">http://llm-server:8000</div></div><span class="badge b-done">● 연결됨</span></div><div class="engine-row"><div><div style="font-size:12px;font-weight:600">MinIO 파일 스토리지</div><div style="font-family:var(--mono);font-size:10px;color:var(--text3)">http://minio:9001</div></div><span class="badge b-done">● 연결됨</span></div><div class="mt12"><button class="btn btn-ghost btn-sm" onclick="toast('엔진 상태 재확인','ok')">↻ 새로고침</button></div></div>
-          <div class="card"><div class="section-label">작업 큐 현황</div><div style="display:flex;flex-direction:column;gap:9px"><div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">대기 중</span><span style="font-weight:700;color:var(--amber)">2건</span></div><div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">ASR 처리 중</span><span style="font-weight:700;color:var(--accent)">1건</span></div><div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">LLM 생성 중</span><span style="font-weight:700;color:#4285f4">1건</span></div><div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">오늘 완료</span><span style="font-weight:700;color:#22c55e">14건</span></div><div class="divider" style="margin:4px 0"></div><div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">평균 처리 시간 (60분 기준)</span><span style="font-weight:700">3분 42초</span></div></div></div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:12px">사용자 관리</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <input class="input" id="new-user-name" placeholder="아이디" style="width:140px;">
+          <input class="input" id="new-user-fullname" placeholder="이름" style="width:120px;">
+          <input class="input" type="email" id="new-user-email" placeholder="이메일" style="width:180px;">
+          <input class="input" type="password" id="new-user-pw" placeholder="비밀번호" style="width:120px;">
+          <select class="input" id="new-user-role" style="width:90px;"><option value="user">일반</option><option value="admin">관리자</option></select>
+          <button class="btn btn-primary btn-sm" onclick="createUser()">추가</button>
         </div>
+        <table class="meeting-table" id="admin-user-table">
+          <thead><tr><th>아이디</th><th>이름</th><th>이메일</th><th>역할</th><th>가입일</th><th style="width:60px"></th></tr></thead>
+          <tbody id="admin-user-tbody"></tbody>
+        </table>
       </div>
     </div>
 
   </div>
 </div>
 
-<!-- EXPORT MODAL -->
+</div><!-- /layout-body -->
+
+<!-- ── EXPORT MODAL ──────────────────────────────────────────────────────── -->
 <div class="modal-bg" id="export-modal">
   <div class="modal">
     <div class="modal-title">회의록 내보내기</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:14px">2025 Q1 전략 기획 회의</div>
-    <button class="export-btn" onclick="doExport('DOCX')"><div class="export-ext" style="background:#e8f0fe;color:#1a56db">DOC</div><div><div style="font-size:13px;font-weight:600">Microsoft Word (.docx)</div><div style="font-size:11px;color:var(--text3);margin-top:2px">표준 회의록 템플릿 적용</div></div></button>
-    <button class="export-btn" onclick="doExport('PDF')"><div class="export-ext" style="background:#fef2f2;color:#b91c1c">PDF</div><div><div style="font-size:13px;font-weight:600">PDF 문서 (.pdf)</div><div style="font-size:11px;color:var(--text3);margin-top:2px">인쇄 및 배포용</div></div></button>
-    <button class="export-btn" onclick="doExport('HWP')"><div class="export-ext" style="background:var(--accent-d);color:var(--accent2)">HWP</div><div><div style="font-size:13px;font-weight:600">한글 문서 (.hwp)</div><div style="font-size:11px;color:var(--text3);margin-top:2px">공공기관·한국 표준 양식</div></div></button>
-    <button class="export-btn" onclick="doExport('TXT')"><div class="export-ext" style="background:var(--bg3);color:var(--text2)">TXT</div><div><div style="font-size:13px;font-weight:600">텍스트 파일 (.txt)</div><div style="font-size:11px;color:var(--text3);margin-top:2px">발화 원문 포함</div></div></button>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:14px" id="export-meeting-title">-</div>
+    <button class="export-btn" onclick="doExport('docx')"><div class="export-ext" style="background:#e8f0fe;color:#1a56db">DOC</div><div><div style="font-size:13px;font-weight:600">Microsoft Word (.docx)</div><div style="font-size:11px;color:var(--text3);margin-top:2px">표준 회의록 템플릿 적용</div></div></button>
+    <button class="export-btn" onclick="doExport('pdf')"><div class="export-ext" style="background:#fef2f2;color:#b91c1c">PDF</div><div><div style="font-size:13px;font-weight:600">PDF 문서 (.pdf)</div><div style="font-size:11px;color:var(--text3);margin-top:2px">인쇄 및 배포용</div></div></button>
+    <button class="export-btn" onclick="doExport('txt')"><div class="export-ext" style="background:var(--bg3);color:var(--text2)">TXT</div><div><div style="font-size:13px;font-weight:600">텍스트 파일 (.txt)</div><div style="font-size:11px;color:var(--text3);margin-top:2px">발화 원문 포함</div></div></button>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeExport()">닫기</button></div>
   </div>
 </div>
+
 <div id="toast-area"></div>
 
 <script>
-// LOGO
-function loadLogo(input){
-  const f=input.files[0];if(!f)return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    const img=document.getElementById('company-logo-img');
-    const ph=document.getElementById('logo-placeholder');
-    img.src=e.target.result;img.style.display='block';ph.style.display='none';
-    toast('회사 로고가 적용되었습니다','ok');
+// ── State ────────────────────────────────────────────────────────────────────
+let _token = localStorage.getItem('kai_token');
+let _me = null;
+let _selectedFile = null;         // File object for upload
+let _mediaRecorder = null;
+let _recChunks = [];
+let _recInterval = null, _recSecs = 0;
+let _activeMeetingId = null;      // meeting currently shown in detail
+let _processingMeetingId = null;  // meeting being polled
+let _pollTimer = null;
+let _listPage = 1;
+let _searchTimer = null;
+
+// ── API helpers ───────────────────────────────────────────────────────────────
+async function api(method, path, body, isJson = true) {
+  const opts = {
+    method,
+    headers: { Authorization: `Bearer ${_token}` },
   };
-  reader.readAsDataURL(f);
+  if (body && isJson) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  } else if (body) {
+    opts.body = body; // FormData
+  }
+  const res = await fetch('/api' + path, opts);
+  if (res.status === 401) { doLogout(); return null; }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || res.statusText);
+  }
+  if (res.status === 204) return null;
+  return res.json();
 }
 
-// NAV
-const pageMap={new:'page-new',my:'page-my',detail:'page-detail',processing:'page-processing',admin:'page-admin'};
-function setNav(el,key){
-  if(!key)return;
-  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
-  if(el)el.classList.add('active');
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  const pg=document.getElementById(pageMap[key]);
-  if(pg)pg.classList.add('active');
-  if(key==='processing')startMockProcessing();
+// ── Auth ─────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  document.getElementById('login-err').textContent = '';
+  if (!username || !password) { document.getElementById('login-err').textContent = '아이디와 비밀번호를 입력해주세요.'; return; }
+
+  try {
+    const form = new URLSearchParams({ username, password });
+    const res = await fetch('/api/auth/login', { method: 'POST', body: form });
+    if (!res.ok) { const e = await res.json(); document.getElementById('login-err').textContent = e.detail; return; }
+    const data = await res.json();
+    _token = data.access_token;
+    localStorage.setItem('kai_token', _token);
+    await afterLogin();
+  } catch (e) {
+    document.getElementById('login-err').textContent = '서버에 연결할 수 없습니다.';
+  }
+}
+document.getElementById('login-password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+async function afterLogin() {
+  try {
+    _me = await api('GET', '/auth/me');
+  } catch { doLogout(); return; }
+  document.getElementById('login-overlay').classList.add('hidden');
+  document.getElementById('topbar-user').textContent = _me.full_name || _me.username;
+  document.getElementById('sb-fullname').textContent = _me.full_name || _me.username;
+  document.getElementById('sb-role').textContent = _me.role === 'admin' ? '관리자' : '일반 사용자';
+  if (_me.role === 'admin') document.getElementById('sb-admin').style.display = '';
+  loadList();
 }
 
-// TABS
-function switchTab(btn,tabId){
-  document.querySelectorAll('.list-tab').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  ['tab-recent','tab-shared','tab-processing'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el)el.style.display=(id===tabId)?'block':'none';
+function doLogout() {
+  _token = null; _me = null;
+  localStorage.removeItem('kai_token');
+  document.getElementById('login-overlay').classList.remove('hidden');
+  document.getElementById('login-username').value = '';
+  document.getElementById('login-password').value = '';
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+const pageMap = { new: 'page-new', my: 'page-my', detail: 'page-detail', processing: 'page-processing', admin: 'page-admin' };
+function setNav(el, key) {
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  if (el) el.classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(pageMap[key])?.classList.add('active');
+  if (key === 'my') loadList();
+  if (key === 'admin') loadAdminStats();
+  if (key === 'new') resetNewForm();
+}
+
+// ── Meeting list ──────────────────────────────────────────────────────────────
+function scheduleSearch() {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(() => { _listPage = 1; loadList(); }, 300);
+}
+
+async function loadList() {
+  const q = document.getElementById('search-input').value.trim();
+  try {
+    const params = new URLSearchParams({ page: _listPage, page_size: 20 });
+    if (q) params.set('q', q);
+    const data = await api('GET', '/meetings?' + params);
+    if (!data) return;
+    renderList(data);
+  } catch (e) { toast('목록 로드 실패: ' + e.message, 'err'); }
+}
+
+function fmtDuration(secs) {
+  if (!secs) return '-';
+  const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60;
+  return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function fmtDate(iso) {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  return d.toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+const STATUS_LABELS = {
+  queued: ['대기', 'b-queue'], asr_processing: ['ASR', 'b-proc'], llm_processing: ['LLM', 'b-proc'],
+  done: ['완료', 'b-done'], failed: ['실패', 'b-fail'],
+};
+
+function renderList(data) {
+  const tbody = document.getElementById('list-tbody');
+  const empty = document.getElementById('list-empty');
+  tbody.innerHTML = '';
+  if (!data.items.length) { empty.style.display = 'flex'; return; }
+  empty.style.display = 'none';
+  data.items.forEach(m => {
+    const [label, cls] = STATUS_LABELS[m.status] || [m.status, 'b-queue'];
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="col-name">${esc(m.title)}</td>
+      <td class="col-dur">${fmtDuration(m.duration_seconds)}</td>
+      <td class="col-date">${fmtDate(m.created_at)}</td>
+      <td><span class="badge ${cls}">${label}</span></td>`;
+    tr.onclick = () => openDetail(m.id, m.status);
+    tbody.appendChild(tr);
   });
+  renderPagination(data.total, data.page, data.page_size);
 }
 
-// CHECKBOX
-function toggleCheck(el){el.classList.toggle('checked');el.textContent=el.classList.contains('checked')?'✓':'';}
-function toggleChk(el){const c=el.classList.toggle('checked');el.textContent=c?'✓':'';const b=el.closest('.action-row')&&el.closest('.action-row').querySelector('.badge');if(b){b.className='badge '+(c?'b-done':'b-proc');b.textContent=c?'완료':'진행 중';}}
-function toggleAllCheck(el){el.classList.toggle('checked');el.textContent=el.classList.contains('checked')?'✓':'';document.querySelectorAll('.row-check:not(#check-all)').forEach(c=>{c.classList.toggle('checked',el.classList.contains('checked'));c.textContent=el.classList.contains('checked')?'✓':''});}
-
-// GOTO
-function gotoDetail(){document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById('page-detail').classList.add('active');}
-function showDetail(){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById('page-detail').classList.add('active');}
-
-// SEARCH
-function filterList(){const q=document.getElementById('search-input').value.toLowerCase();document.querySelectorAll('#list-table tbody tr').forEach(tr=>{tr.style.display=tr.textContent.toLowerCase().includes(q)?'':'none';});}
-
-// STEP 전환
-function goStep2(){
-  document.getElementById('step1-area').style.display='none';
-  document.getElementById('step2-area').style.display='block';
-  document.getElementById('step-sub').textContent='회의 기본 정보를 입력해 주세요.';
-  document.getElementById('sc1').className='step-circle s-done'; document.getElementById('sc1').textContent='✓';
-  document.getElementById('sn1').className='step-name';
-  document.getElementById('sc2').className='step-circle s-active';
-  document.getElementById('sn2').className='step-name s-active';
-}
-function goStep1(){
-  document.getElementById('step2-area').style.display='none';
-  document.getElementById('step1-area').style.display='block';
-  document.getElementById('step-sub').textContent='음성 파일을 업로드하거나 직접 녹음하세요.';
-  document.getElementById('sc1').className='step-circle s-active'; document.getElementById('sc1').textContent='1';
-  document.getElementById('sn1').className='step-name s-active';
-  document.getElementById('sc2').className='step-circle';
-  document.getElementById('sn2').className='step-name';
+function renderPagination(total, page, pageSize) {
+  const pages = Math.ceil(total / pageSize);
+  const el = document.getElementById('list-pagination');
+  el.innerHTML = '';
+  if (pages <= 1) return;
+  const add = (label, p, active) => {
+    const d = document.createElement('div');
+    d.className = 'pg-btn' + (active ? ' active' : '');
+    d.textContent = label;
+    d.onclick = () => { _listPage = p; loadList(); };
+    el.appendChild(d);
+  };
+  add('‹', Math.max(1, page - 1), false);
+  for (let i = 1; i <= pages; i++) add(i, i, i === page);
+  add('›', Math.min(pages, page + 1), false);
 }
 
-// RECORDING
-let recInterval=null,recSecs=0;
-function startRec(){document.getElementById('rec-start').style.display='none';document.getElementById('rec-stop').style.display='block';document.getElementById('wave-area').style.display='flex';document.getElementById('rec-clock').style.display='block';recSecs=0;recInterval=setInterval(()=>{recSecs++;const h=String(Math.floor(recSecs/3600)).padStart(2,'0'),m=String(Math.floor((recSecs%3600)/60)).padStart(2,'0'),s=String(recSecs%60).padStart(2,'0');document.getElementById('rec-clock').textContent=`${h}:${m}:${s}`;},1000);}
-function stopRec(){clearInterval(recInterval);document.getElementById('rec-start').style.display='block';document.getElementById('rec-stop').style.display='none';document.getElementById('wave-area').style.display='none';document.getElementById('rec-clock').style.display='none';toast('녹음이 저장되었습니다','ok');}
-
-// FILE
-function handleFileSelect(input){if(input.files&&input.files[0])showFile(input.files[0]);}
-function handleDrop(e){e.preventDefault();document.querySelector('.upload-zone').classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f)showFile(f);}
-function showFile(f){document.querySelector('.upload-zone').style.display='none';document.getElementById('file-info').style.display='block';document.getElementById('file-name').textContent=f.name;document.getElementById('file-size').textContent=(f.size>1048576?(f.size/1048576).toFixed(1)+' MB':(f.size/1024).toFixed(1)+' KB');toast('파일 선택: '+f.name,'ok');}
-function clearFile(){document.querySelector('.upload-zone').style.display='block';document.getElementById('file-info').style.display='none';document.getElementById('file-input').value='';}
-
-// PROCESSING
-let procTimer=null,sttVal=0,llmVal=0,procPhase='idle';
-function startProcessing(){const t=document.getElementById('meeting-title').value.trim();if(!t){toast('회의 제목을 입력해주세요','err');return;}setNav(null,'processing');}
-function startMockProcessing(){
-  sttVal=0;llmVal=0;procPhase='stt';clearInterval(procTimer);
-  document.getElementById('stt-bar').style.width='0%';document.getElementById('llm-bar').style.width='0%';
-  document.getElementById('stt-pct').textContent='0%';document.getElementById('llm-pct').textContent='대기 중';
-  document.getElementById('llm-section').style.opacity='0.4';
-  document.getElementById('stt-status').textContent='faster-whisper-server 연결 중...';
-  const log=document.getElementById('proc-log');log.innerHTML='';
-  const now=()=>new Date().toTimeString().slice(0,8);
-  const addLog=(cls,msg)=>{const d=document.createElement('div');d.innerHTML=`<span class="log-t">[${now()}]</span> <span class="${cls}">${msg}</span>`;log.appendChild(d);log.scrollTop=log.scrollHeight;};
-  addLog('log-ok','ASR 작업 등록 (job_id: asr_a8f2c1)');
-  setTimeout(()=>addLog('log-t','음성 파일 로드 완료 — 58분 32초'),600);
-  setTimeout(()=>addLog('log-ok','화자 분리 시작 (pyannote v3.1)'),1200);
-  procTimer=setInterval(()=>{
-    if(procPhase==='stt'){sttVal=Math.min(100,sttVal+(Math.random()*2.5+0.8));document.getElementById('stt-bar').style.width=sttVal+'%';document.getElementById('stt-pct').textContent=Math.floor(sttVal)+'%';document.getElementById('stt-status').textContent=`세그먼트 처리 중 — ${Math.floor(sttVal*0.58).toFixed(0)}/58분...`;if(sttVal>=100){procPhase='llm';document.getElementById('llm-section').style.opacity='1';document.getElementById('llm-spin').className='spin';document.getElementById('llm-spin').style.color='#4285f4';addLog('log-ok','ASR 완료 — 847개 세그먼트, 화자 5명');setTimeout(()=>addLog('log-info','LLM 회의록 생성 시작'),300);}}
-    else if(procPhase==='llm'){llmVal=Math.min(100,llmVal+(Math.random()*3+1));document.getElementById('llm-bar').style.width=llmVal+'%';document.getElementById('llm-pct').textContent=Math.floor(llmVal)+'%';if(llmVal>=100){procPhase='done';clearInterval(procTimer);addLog('log-ok','회의록 생성 완료');toast('회의록 생성이 완료되었습니다!','ok');}}
-  },180);
+// ── Meeting detail ────────────────────────────────────────────────────────────
+async function openDetail(meetingId, status) {
+  if (status !== 'done' && status !== 'failed') {
+    // Show processing page and start polling
+    _processingMeetingId = meetingId;
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-processing').classList.add('active');
+    startPolling(meetingId);
+    return;
+  }
+  try {
+    const data = await api('GET', `/meetings/${meetingId}`);
+    if (!data) return;
+    _activeMeetingId = meetingId;
+    renderDetail(data);
+    document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-detail').classList.add('active');
+  } catch (e) { toast('상세 로드 실패: ' + e.message, 'err'); }
 }
 
-// DETAIL
-function activeToc(el){document.querySelectorAll('.toc-item').forEach(i=>i.classList.remove('active'));el.classList.add('active');}
-function addDecision(){const t=prompt('결정 사항:');if(!t)return;const d=document.createElement('div');d.className='decision-item';d.textContent=t;document.getElementById('decisions-list').appendChild(d);toast('결정 사항 추가','ok');}
-function addAction(){const t=prompt('액션 아이템:');if(!t)return;const d=document.createElement('div');d.className='action-row';d.innerHTML=`<div class="checkbox" onclick="toggleChk(this)"></div><div style="flex:1"><div style="font-size:13px;font-weight:500">${t}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">담당: 미지정 · 기한: 미지정</div></div><span class="badge b-proc">진행 중</span>`;document.getElementById('sec-actions').appendChild(d);toast('액션 아이템 추가','ok');}
-function saveDoc(){toast('저장 완료 (v4)','ok');}
+function renderDetail(m) {
+  document.getElementById('detail-title').textContent = m.title;
+  document.getElementById('detail-meta').textContent =
+    `${m.meeting_date || '-'} · ${fmtDuration(m.duration_seconds)} · 참석 ${m.attendees ? m.attendees.split(',').length : 0}명`;
+  document.getElementById('d-title').value = m.title;
+  document.getElementById('d-date').value = m.meeting_date || '';
+  document.getElementById('d-location').value = m.location;
+  document.getElementById('d-attendees').value = m.attendees;
+  document.getElementById('d-summary').value = m.summary || '';
+  document.getElementById('export-meeting-title').textContent = m.title;
 
-// EXPORT
-function showExport(){document.getElementById('export-modal').classList.add('open');}
-function closeExport(){document.getElementById('export-modal').classList.remove('open');}
-function doExport(fmt){closeExport();toast(fmt+' 생성 중...','info');setTimeout(()=>toast(fmt+' 다운로드 완료','ok'),1500);}
-document.getElementById('export-modal').addEventListener('click',function(e){if(e.target===this)closeExport();});
+  const dl = document.getElementById('decisions-list');
+  dl.innerHTML = '';
+  (m.decisions || []).forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'decision-item';
+    el.textContent = d.content;
+    dl.appendChild(el);
+  });
 
-// TOAST
-function toast(msg,type='info'){const area=document.getElementById('toast-area');const el=document.createElement('div');const icon=type==='ok'?'✓':type==='err'?'✕':'ℹ';el.className=`toast t-${type}`;el.innerHTML=`<span>${icon}</span><span>${msg}</span>`;area.appendChild(el);setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity .3s';setTimeout(()=>el.remove(),300);},3000);}
+  const al = document.getElementById('actions-list');
+  al.innerHTML = '';
+  (m.action_items || []).forEach(item => {
+    const done = item.status === 'done';
+    const row = document.createElement('div');
+    row.className = 'action-row';
+    row.innerHTML = `
+      <div class="checkbox ${done ? 'checked' : ''}" onclick="toggleActionItem(this, ${item.id})">${done ? '✓' : ''}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500">${esc(item.content)}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">담당: ${esc(item.assignee || '-')} · 기한: ${item.due_date || '미지정'}</div>
+      </div>
+      <span class="badge ${done ? 'b-done' : 'b-proc'}">${done ? '완료' : '진행 중'}</span>`;
+    al.appendChild(row);
+  });
 
-// INIT
-document.addEventListener('DOMContentLoaded',()=>{const d=document.getElementById('meeting-date');if(d)d.value=new Date().toISOString().slice(0,10);});
+  document.getElementById('transcript-text').textContent = m.transcript || '(발화 기록 없음)';
+}
+
+async function toggleActionItem(el, itemId) {
+  const done = !el.classList.contains('checked');
+  try {
+    await api('PATCH', `/meetings/${_activeMeetingId}/action-items/${itemId}`, { status: done ? 'done' : 'pending' });
+    el.classList.toggle('checked', done);
+    el.textContent = done ? '✓' : '';
+    const badge = el.closest('.action-row')?.querySelector('.badge');
+    if (badge) { badge.className = `badge ${done ? 'b-done' : 'b-proc'}`; badge.textContent = done ? '완료' : '진행 중'; }
+  } catch (e) { toast('저장 실패: ' + e.message, 'err'); }
+}
+
+async function saveDetail() {
+  try {
+    await api('PATCH', `/meetings/${_activeMeetingId}`, {
+      title: document.getElementById('d-title').value,
+      meeting_date: document.getElementById('d-date').value || null,
+      location: document.getElementById('d-location').value,
+      attendees: document.getElementById('d-attendees').value,
+      summary: document.getElementById('d-summary').value,
+    });
+    toast('저장되었습니다.', 'ok');
+  } catch (e) { toast('저장 실패: ' + e.message, 'err'); }
+}
+
+function addDecision() {
+  const t = prompt('결정 사항:');
+  if (!t) return;
+  const el = document.createElement('div');
+  el.className = 'decision-item';
+  el.textContent = t;
+  document.getElementById('decisions-list').appendChild(el);
+}
+
+// ── New meeting form ──────────────────────────────────────────────────────────
+function resetNewForm() {
+  clearFile();
+  _selectedFile = null;
+  document.getElementById('step1-area').style.display = '';
+  document.getElementById('step2-area').style.display = 'none';
+  document.getElementById('meeting-title').value = '';
+  document.getElementById('meeting-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('meeting-location').value = '';
+  document.getElementById('meeting-attendees').value = '';
+  document.getElementById('meeting-agenda').value = '';
+  document.getElementById('meeting-notes').value = '';
+  document.getElementById('sc1').className = 'step-circle s-active'; document.getElementById('sc1').textContent = '1';
+  document.getElementById('sn1').className = 'step-name s-active';
+  document.getElementById('sc2').className = 'step-circle'; document.getElementById('sn2').className = 'step-name';
+}
+
+function goStep2() {
+  if (!_selectedFile) { toast('음성 파일을 선택해주세요.', 'err'); return; }
+  document.getElementById('step1-area').style.display = 'none';
+  document.getElementById('step2-area').style.display = '';
+  document.getElementById('step-sub').textContent = '회의 기본 정보를 입력해 주세요.';
+  document.getElementById('sc1').className = 'step-circle s-done'; document.getElementById('sc1').textContent = '✓';
+  document.getElementById('sn1').className = 'step-name';
+  document.getElementById('sc2').className = 'step-circle s-active';
+  document.getElementById('sn2').className = 'step-name s-active';
+}
+
+function goStep1() {
+  document.getElementById('step2-area').style.display = 'none';
+  document.getElementById('step1-area').style.display = '';
+  document.getElementById('step-sub').textContent = '음성 파일을 업로드하거나 직접 녹음하세요.';
+  document.getElementById('sc1').className = 'step-circle s-active'; document.getElementById('sc1').textContent = '1';
+  document.getElementById('sn1').className = 'step-name s-active';
+  document.getElementById('sc2').className = 'step-circle'; document.getElementById('sn2').className = 'step-name';
+}
+
+// ── File handling ─────────────────────────────────────────────────────────────
+function handleFileSelect(input) { if (input.files?.[0]) showFile(input.files[0]); }
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag-over');
+  if (e.dataTransfer.files?.[0]) showFile(e.dataTransfer.files[0]);
+}
+function showFile(f) {
+  _selectedFile = f;
+  document.getElementById('upload-zone').style.display = 'none';
+  document.getElementById('file-info').style.display = 'block';
+  document.getElementById('file-name').textContent = f.name;
+  document.getElementById('file-size').textContent = f.size > 1048576 ? (f.size/1048576).toFixed(1)+' MB' : (f.size/1024).toFixed(1)+' KB';
+}
+function clearFile() {
+  _selectedFile = null;
+  document.getElementById('upload-zone').style.display = '';
+  document.getElementById('file-info').style.display = 'none';
+  document.getElementById('file-input').value = '';
+}
+
+// ── Recording ─────────────────────────────────────────────────────────────────
+async function startRec() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    _mediaRecorder = new MediaRecorder(stream);
+    _recChunks = [];
+    _mediaRecorder.ondataavailable = e => { if (e.data.size > 0) _recChunks.push(e.data); };
+    _mediaRecorder.onstop = () => {
+      const blob = new Blob(_recChunks, { type: 'audio/webm' });
+      showFile(new File([blob], `recording-${Date.now()}.webm`, { type: 'audio/webm' }));
+      stream.getTracks().forEach(t => t.stop());
+    };
+    _mediaRecorder.start();
+    _recSecs = 0;
+    document.getElementById('rec-start').style.display = 'none';
+    document.getElementById('rec-stop').style.display = 'block';
+    document.getElementById('wave-area').style.display = 'flex';
+    document.getElementById('rec-clock').style.display = 'block';
+    _recInterval = setInterval(() => {
+      _recSecs++;
+      const h = String(Math.floor(_recSecs/3600)).padStart(2,'0');
+      const m = String(Math.floor((_recSecs%3600)/60)).padStart(2,'0');
+      const s = String(_recSecs%60).padStart(2,'0');
+      document.getElementById('rec-clock').textContent = `${h}:${m}:${s}`;
+    }, 1000);
+  } catch { toast('마이크 접근이 거부되었습니다.', 'err'); }
+}
+
+function stopRec() {
+  clearInterval(_recInterval);
+  _mediaRecorder?.stop();
+  document.getElementById('rec-start').style.display = 'block';
+  document.getElementById('rec-stop').style.display = 'none';
+  document.getElementById('wave-area').style.display = 'none';
+  document.getElementById('rec-clock').style.display = 'none';
+  toast('녹음이 완료되었습니다.', 'ok');
+}
+
+// ── Submit meeting ────────────────────────────────────────────────────────────
+function submitMeeting() {
+  const title = document.getElementById('meeting-title').value.trim();
+  if (!title) { toast('회의 제목을 입력해주세요.', 'err'); return; }
+  if (!_selectedFile) { toast('음성 파일이 없습니다.', 'err'); return; }
+
+  const fd = new FormData();
+  fd.append('file', _selectedFile);
+  fd.append('title', title);
+  fd.append('meeting_date', document.getElementById('meeting-date').value);
+  fd.append('location', document.getElementById('meeting-location').value);
+  fd.append('attendees', document.getElementById('meeting-attendees').value);
+  fd.append('agenda', document.getElementById('meeting-agenda').value);
+  fd.append('notes', document.getElementById('meeting-notes').value);
+  fd.append('language', document.getElementById('meeting-language').value);
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  document.getElementById('upload-prog-wrap').style.display = '';
+
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/meetings');
+  xhr.setRequestHeader('Authorization', `Bearer ${_token}`);
+
+  xhr.upload.onprogress = e => {
+    if (e.lengthComputable) {
+      const pct = Math.round(e.loaded / e.total * 100);
+      document.getElementById('upload-bar').style.width = pct + '%';
+      document.getElementById('upload-pct').textContent = pct + '%';
+    }
+  };
+
+  xhr.onload = () => {
+    btn.disabled = false;
+    document.getElementById('upload-prog-wrap').style.display = 'none';
+    if (xhr.status === 201) {
+      const data = JSON.parse(xhr.responseText);
+      _processingMeetingId = data.id;
+      showProcessingPage(data.id);
+    } else {
+      const err = JSON.parse(xhr.responseText);
+      toast('업로드 실패: ' + (err.detail || xhr.statusText), 'err');
+    }
+  };
+  xhr.onerror = () => { btn.disabled = false; toast('업로드 중 오류가 발생했습니다.', 'err'); };
+  xhr.send(fd);
+}
+
+// ── Processing page & polling ─────────────────────────────────────────────────
+function showProcessingPage(meetingId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-processing').classList.add('active');
+  document.getElementById('proc-log').innerHTML = '';
+  document.getElementById('proc-done-btn').style.display = 'none';
+  document.getElementById('proc-fail-msg').style.display = 'none';
+  document.getElementById('asr-badge').className = 'badge b-queue'; document.getElementById('asr-badge').textContent = '대기 중';
+  document.getElementById('llm-badge').className = 'badge b-queue'; document.getElementById('llm-badge').textContent = '대기 중';
+  document.getElementById('proc-status-llm').style.opacity = '0.4';
+  addLog('log-info', `회의 등록 완료 (id: ${meetingId})`);
+  startPolling(meetingId);
+}
+
+function startPolling(meetingId) {
+  clearInterval(_pollTimer);
+  _pollTimer = setInterval(() => pollStatus(meetingId), 3000);
+  pollStatus(meetingId);
+}
+
+async function pollStatus(meetingId) {
+  try {
+    const data = await api('GET', `/meetings/${meetingId}/status`);
+    if (!data) return;
+    updateProcUI(data.status, data.error_message);
+    if (data.status === 'done' || data.status === 'failed') clearInterval(_pollTimer);
+  } catch { /* network hiccup – keep polling */ }
+}
+
+function updateProcUI(status, errorMsg) {
+  const asrBadge = document.getElementById('asr-badge');
+  const llmBadge = document.getElementById('llm-badge');
+  const llmSection = document.getElementById('proc-status-llm');
+
+  if (status === 'queued') {
+    addLog('log-t', 'ASR 작업 대기 중...');
+  } else if (status === 'asr_processing') {
+    asrBadge.className = 'badge b-proc'; asrBadge.textContent = '처리 중';
+    addLog('log-ok', 'ASR 처리 시작');
+  } else if (status === 'llm_processing') {
+    asrBadge.className = 'badge b-done'; asrBadge.textContent = '완료';
+    llmSection.style.opacity = '1';
+    llmBadge.className = 'badge b-proc'; llmBadge.textContent = '처리 중';
+    addLog('log-ok', 'ASR 완료 — LLM 회의록 생성 시작');
+  } else if (status === 'done') {
+    asrBadge.className = 'badge b-done'; asrBadge.textContent = '완료';
+    llmSection.style.opacity = '1';
+    llmBadge.className = 'badge b-done'; llmBadge.textContent = '완료';
+    addLog('log-ok', '회의록 생성 완료!');
+    document.getElementById('proc-done-btn').style.display = '';
+    toast('회의록 생성이 완료되었습니다!', 'ok');
+  } else if (status === 'failed') {
+    addLog('log-t', '처리 실패: ' + (errorMsg || '알 수 없는 오류'));
+    document.getElementById('proc-fail-msg').style.display = '';
+    document.getElementById('proc-fail-msg').textContent = '처리 실패: ' + (errorMsg || '알 수 없는 오류');
+    toast('처리 중 오류가 발생했습니다.', 'err');
+  }
+}
+
+let _lastLog = '';
+function addLog(cls, msg) {
+  if (_lastLog === msg) return; // deduplicate
+  _lastLog = msg;
+  const log = document.getElementById('proc-log');
+  const now = new Date().toTimeString().slice(0, 8);
+  const d = document.createElement('div');
+  d.innerHTML = `<span class="log-t">[${now}]</span> <span class="${cls}">${esc(msg)}</span>`;
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+}
+
+async function openProcessingResult() {
+  clearInterval(_pollTimer);
+  await openDetail(_processingMeetingId, 'done');
+}
+
+// ── Export ────────────────────────────────────────────────────────────────────
+function showExport() { document.getElementById('export-modal').classList.add('open'); }
+function closeExport() { document.getElementById('export-modal').classList.remove('open'); }
+async function doExport(fmt) {
+  closeExport();
+  toast(`${fmt.toUpperCase()} 생성 중...`, 'info');
+  try {
+    const res = await fetch(`/api/meetings/${_activeMeetingId}/export?fmt=${fmt}`, {
+      headers: { Authorization: `Bearer ${_token}` }
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `meeting.${fmt}`; a.click();
+    URL.revokeObjectURL(url);
+    toast(`${fmt.toUpperCase()} 다운로드 완료`, 'ok');
+  } catch (e) { toast('내보내기 실패: ' + e.message, 'err'); }
+}
+document.getElementById('export-modal').addEventListener('click', function(e) { if (e.target === this) closeExport(); });
+
+// ── Admin ─────────────────────────────────────────────────────────────────────
+async function loadAdminStats() {
+  try {
+    const data = await api('GET', '/admin/stats');
+    if (!data) return;
+    document.getElementById('stat-users').textContent = data.user_count;
+    document.getElementById('stat-meetings').textContent = data.meeting_count;
+    document.getElementById('stat-processing').textContent = data.processing_count;
+    const gb = (data.storage_bytes / 1073741824).toFixed(2);
+    document.getElementById('stat-storage').textContent = gb + ' GB';
+
+    const users = await api('GET', '/admin/users');
+    if (!users) return;
+    const tbody = document.getElementById('admin-user-tbody');
+    tbody.innerHTML = '';
+    users.items.forEach(u => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${esc(u.username)}</td>
+        <td>${esc(u.full_name)}</td>
+        <td>${esc(u.email)}</td>
+        <td>${u.role === 'admin' ? '관리자' : '일반'}</td>
+        <td>${u.created_at?.slice(0,10) || '-'}</td>
+        <td><button class="btn btn-ghost btn-sm" onclick="deactivateUser(${u.id})">${u.is_active ? '비활성화' : '활성화'}</button></td>`;
+      tbody.appendChild(tr);
+    });
+  } catch (e) { toast('관리자 데이터 로드 실패: ' + e.message, 'err'); }
+}
+
+async function createUser() {
+  const username = document.getElementById('new-user-name').value.trim();
+  const full_name = document.getElementById('new-user-fullname').value.trim();
+  const email = document.getElementById('new-user-email').value.trim();
+  const password = document.getElementById('new-user-pw').value;
+  const role = document.getElementById('new-user-role').value;
+  if (!username || !email || !password) { toast('아이디, 이메일, 비밀번호를 입력해주세요.', 'err'); return; }
+  try {
+    await api('POST', '/admin/users', { username, full_name, email, password, role });
+    toast('사용자가 추가되었습니다.', 'ok');
+    loadAdminStats();
+    ['new-user-name','new-user-fullname','new-user-email','new-user-pw'].forEach(id => document.getElementById(id).value = '');
+  } catch (e) { toast('추가 실패: ' + e.message, 'err'); }
+}
+
+async function deactivateUser(userId) {
+  if (!confirm('이 사용자를 비활성화/활성화하시겠습니까?')) return;
+  try {
+    const users = await api('GET', '/admin/users');
+    const u = users.items.find(x => x.id === userId);
+    await api('PATCH', `/admin/users/${userId}`, { is_active: !u?.is_active });
+    loadAdminStats();
+  } catch (e) { toast('실패: ' + e.message, 'err'); }
+}
+
+// ── TOC ───────────────────────────────────────────────────────────────────────
+function activeToc(el) { document.querySelectorAll('.toc-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); }
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg, type = 'info') {
+  const area = document.getElementById('toast-area');
+  const el = document.createElement('div');
+  const icon = type === 'ok' ? '✓' : type === 'err' ? '✕' : 'ℹ';
+  el.className = `toast t-${type}`;
+  el.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+  area.appendChild(el);
+  setTimeout(() => { el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(() => el.remove(), 300); }, 3500);
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('meeting-date').value = new Date().toISOString().slice(0,10);
+  if (_token) afterLogin().catch(doLogout);
+});
 </script>
-</div><!-- /layout-body -->
 </body>
 </html>
