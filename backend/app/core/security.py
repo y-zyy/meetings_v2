@@ -1,26 +1,18 @@
-import base64
 import hashlib
+import hmac
 from datetime import datetime, timedelta, timezone
 
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from app.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
-def _prepare(password: str) -> str:
-    """SHA-256 pre-hash to bypass bcrypt's 72-byte limit."""
-    return base64.b64encode(hashlib.sha256(password.encode()).digest()).decode()
-
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(_prepare(password))
+    return hashlib.sha256(password.encode()).hexdigest()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(_prepare(plain), hashed)
+    return hmac.compare_digest(hashlib.sha256(plain.encode()).hexdigest(), hashed)
 
 
 def create_access_token(user_id: int) -> str:
