@@ -26,11 +26,16 @@ class Settings(BaseSettings):
     ASR_RESPONSE_FIELD: str = "text"
     ASR_TIMEOUT: int = 7200
 
-    # LLM
+    # LLM (OpenAI-compatible local server)
     LLM_API_BASE_URL: str = "http://llm-server:8000/v1"
     LLM_API_KEY: str = ""
     LLM_MODEL: str = "gpt-4o"
     LLM_TIMEOUT: int = 120
+
+    # Cloud inference keys (if set, take priority over local servers)
+    OPENAI_API_KEY: str = ""           # Whisper ASR via OpenAI
+    ANTHROPIC_API_KEY: str = ""        # Meeting-minutes LLM via Claude
+    ANTHROPIC_MODEL: str = "claude-sonnet-4-6"
 
     # Admin seed
     ADMIN_USERNAME: str = "admin"

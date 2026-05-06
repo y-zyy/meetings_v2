@@ -1,22 +1,21 @@
 import json
 import re
 
-from openai import OpenAI
-
 from app.config import settings
 
-_client: OpenAI | None = None
+_openai_client = None
 
 
-def _get_client() -> OpenAI:
-    global _client
-    if _client is None:
-        _client = OpenAI(
+def _get_openai_client():
+    global _openai_client
+    if _openai_client is None:
+        from openai import OpenAI
+        _openai_client = OpenAI(
             base_url=settings.LLM_API_BASE_URL,
             api_key=settings.LLM_API_KEY or "none",
             timeout=settings.LLM_TIMEOUT,
         )
-    return _client
+    return _openai_client
 
 
 SYSTEM_PROMPT = (
@@ -73,17 +72,11 @@ def generate_minutes(
         transcript=transcript[:12000],  # guard against token overflow
     )
 
-    client = _get_client()
-    response = client.chat.completions.create(
-        model=settings.LLM_MODEL,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.2,
-    )
+    if settings.ANTHROPIC_API_KEY:
+        raw = _call_anthropic(prompt)
+    else:
+        raw = _call_openai(prompt)
 
-    raw = response.choices[0].message.content or ""
     # Strip markdown code fences if present
     raw = re.sub(r"^```(?:json)?\s*", "", raw.strip(), flags=re.IGNORECASE)
     raw = re.sub(r"\s*```$", "", raw.strip())
@@ -93,3 +86,28 @@ def generate_minutes(
     except json.JSONDecodeError:
         # Return minimal structure so the meeting isn't left broken
         return {"summary": raw, "decisions": [], "action_items": []}
+
+
+def _call_anthropic(prompt: str) -> str:
+    import anthropic
+    client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY, timeout=settings.LLM_TIMEOUT)
+    message = client.messages.create(
+        model=settings.ANTHROPIC_MODEL,
+        max_tokens=4096,
+        system=SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return message.content[0].text
+
+
+def _call_openai(prompt: str) -> str:
+    client = _get_openai_client()
+    response = client.chat.completions.create(
+        model=settings.LLM_MODEL,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.2,
+    )
+    return response.choices[0].message.content or ""
