@@ -175,6 +175,16 @@ select.input{appearance:none;cursor:pointer;}
 .export-btn:hover{border-color:var(--accent);background:var(--accent-d);}
 .export-ext{width:36px;height:36px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;}
 
+/* CONSENT DIALOG */
+#consent-overlay{position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;}
+#consent-overlay.hidden{display:none;}
+.consent-box{background:#fff;border-radius:16px;padding:36px 40px;width:520px;max-width:94vw;box-shadow:0 20px 60px rgba(0,0,0,.35);}
+.consent-header{display:flex;align-items:center;gap:10px;margin-bottom:20px;}
+.consent-icon{width:40px;height:40px;background:#fef2f2;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.consent-title{font-size:16px;font-weight:800;color:var(--text);}
+.consent-body{font-size:13px;color:var(--text2);line-height:1.8;background:#f8f9fa;border:1px solid var(--border);border-radius:var(--rs);padding:16px 18px;margin-bottom:22px;word-break:keep-all;}
+.consent-footer{display:flex;gap:10px;justify-content:flex-end;}
+
 /* TOAST */
 #toast-area{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:7px;}
 .toast{background:var(--text);color:#fff;border-radius:var(--rs);padding:10px 16px;min-width:220px;font-size:12px;box-shadow:var(--shadow-md);display:flex;align-items:center;gap:8px;animation:slideIn .2s ease;}
@@ -190,6 +200,25 @@ select.input{appearance:none;cursor:pointer;}
 </style>
 </head>
 <body>
+
+<!-- ── CONSENT DIALOG ───────────────────────────────────────────────────── -->
+<div id="consent-overlay" class="hidden">
+  <div class="consent-box">
+    <div class="consent-header">
+      <div class="consent-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div class="consent-title">보안 서약 동의</div>
+    </div>
+    <div class="consent-body">
+      본 시스템을 사용함에 있어 사용자는 방위사업 관련 훈령에 따라 '비밀 관련 사항'을 누설하거나 외부에 발설하지 않아야 합니다. 이를 위반하여 발생하는 모든 책임은 사용자에게 있음을 알려드립니다. 시스템 이용을 계속하시려면 아래 동의 버튼을 눌러주시기 바랍니다.
+    </div>
+    <div class="consent-footer">
+      <button class="btn btn-ghost" onclick="declineConsent()">거부 (로그아웃)</button>
+      <button class="btn btn-primary" onclick="acceptConsent()">동의합니다</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── LOGIN OVERLAY ────────────────────────────────────────────────────── -->
 <div id="login-overlay">
@@ -666,6 +695,11 @@ async function afterLogin() {
     _me = await api('GET', '/auth/me');
   } catch { doLogout(); return; }
   document.getElementById('login-overlay').classList.add('hidden');
+  document.getElementById('consent-overlay').classList.remove('hidden');
+}
+
+function acceptConsent() {
+  document.getElementById('consent-overlay').classList.add('hidden');
   document.getElementById('topbar-user').textContent = _me.full_name || _me.username;
   document.getElementById('sb-fullname').textContent = _me.full_name || _me.username;
   document.getElementById('sb-role').textContent = _me.role === 'admin' ? '관리자' : '일반 사용자';
@@ -673,9 +707,16 @@ async function afterLogin() {
   loadList();
 }
 
+function declineConsent() {
+  document.getElementById('consent-overlay').classList.add('hidden');
+  doLogout();
+  toast('동의하지 않아 로그아웃되었습니다.', 'err');
+}
+
 function doLogout() {
   _token = null; _me = null;
   localStorage.removeItem('kai_token');
+  document.getElementById('consent-overlay').classList.add('hidden');
   document.getElementById('login-overlay').classList.remove('hidden');
   document.getElementById('login-username').value = '';
   document.getElementById('login-password').value = '';
