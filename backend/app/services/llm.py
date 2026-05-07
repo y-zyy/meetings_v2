@@ -3,20 +3,6 @@ import re
 
 from app.config import settings
 
-_openai_client = None
-
-
-def _get_openai_client():
-    global _openai_client
-    if _openai_client is None:
-        from openai import OpenAI
-        _openai_client = OpenAI(
-            base_url=settings.LLM_API_BASE_URL,
-            api_key=settings.LLM_API_KEY or "none",
-            timeout=settings.LLM_TIMEOUT,
-        )
-    return _openai_client
-
 
 SYSTEM_PROMPT = (
     "당신은 전문 회의록 작성 AI입니다. "
@@ -61,38 +47,48 @@ def generate_minutes(
     attendees: str,
     agenda: str,
     transcript: str,
+    effective: dict | None = None,
 ) -> dict:
-    """Call the LLM API and return parsed meeting minutes."""
+    """Call the LLM API and return parsed meeting minutes.
+
+    effective: dict returned by get_effective_settings_sync(); when None the
+    module-level settings object is used directly (backward-compat).
+    """
+    cfg = effective or {k: getattr(settings, k, "") for k in (
+        "ANTHROPIC_API_KEY", "ANTHROPIC_MODEL",
+        "LLM_API_BASE_URL", "LLM_API_KEY", "LLM_MODEL", "LLM_TIMEOUT",
+    )}
+
     prompt = USER_PROMPT_TEMPLATE.format(
         title=title,
         meeting_date=meeting_date,
         location=location,
         attendees=attendees,
         agenda=agenda,
-        transcript=transcript[:12000],  # guard against token overflow
+        transcript=transcript[:12000],
     )
 
-    if settings.ANTHROPIC_API_KEY:
-        raw = _call_anthropic(prompt)
+    if cfg.get("ANTHROPIC_API_KEY"):
+        raw = _call_anthropic(prompt, cfg)
     else:
-        raw = _call_openai(prompt)
+        raw = _call_openai(prompt, cfg)
 
-    # Strip markdown code fences if present
     raw = re.sub(r"^```(?:json)?\s*", "", raw.strip(), flags=re.IGNORECASE)
     raw = re.sub(r"\s*```$", "", raw.strip())
 
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
-        # Return minimal structure so the meeting isn't left broken
         return {"summary": raw, "decisions": [], "action_items": []}
 
 
-def _call_anthropic(prompt: str) -> str:
+def _call_anthropic(prompt: str, cfg: dict) -> str:
     import anthropic
-    client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY, timeout=settings.LLM_TIMEOUT)
+    timeout = int(cfg.get("LLM_TIMEOUT") or settings.LLM_TIMEOUT)
+    model = cfg.get("ANTHROPIC_MODEL") or settings.ANTHROPIC_MODEL
+    client = anthropic.Anthropic(api_key=cfg["ANTHROPIC_API_KEY"], timeout=timeout)
     message = client.messages.create(
-        model=settings.ANTHROPIC_MODEL,
+        model=model,
         max_tokens=4096,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": prompt}],
@@ -100,10 +96,16 @@ def _call_anthropic(prompt: str) -> str:
     return message.content[0].text
 
 
-def _call_openai(prompt: str) -> str:
-    client = _get_openai_client()
+def _call_openai(prompt: str, cfg: dict) -> str:
+    from openai import OpenAI
+    base_url = cfg.get("LLM_API_BASE_URL") or settings.LLM_API_BASE_URL
+    api_key = cfg.get("LLM_API_KEY") or "none"
+    model = cfg.get("LLM_MODEL") or settings.LLM_MODEL
+    timeout = int(cfg.get("LLM_TIMEOUT") or settings.LLM_TIMEOUT)
+
+    client = OpenAI(base_url=base_url, api_key=api_key, timeout=timeout)
     response = client.chat.completions.create(
-        model=settings.LLM_MODEL,
+        model=model,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt},

@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import AsyncSessionLocal, engine
 from app.routers import auth, meetings, admin
+from app.routers import settings_admin
 
 logging.basicConfig(level=logging.INFO)
 
@@ -23,6 +24,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(meetings.router)
 app.include_router(admin.router)
+app.include_router(settings_admin.router)
 
 
 @app.on_event("startup")
@@ -32,7 +34,7 @@ async def on_startup():
 
     # Create tables & seed admin user
     from app.database import Base
-    from app.models import user, meeting  # register models
+    from app.models import user, meeting, setting  # register models
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

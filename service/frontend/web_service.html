@@ -508,6 +508,80 @@ select.input{appearance:none;cursor:pointer;}
           <thead><tr><th>아이디</th><th>이름</th><th>이메일</th><th>역할</th><th>가입일</th><th style="width:60px"></th></tr></thead>
           <tbody id="admin-user-tbody"></tbody>
         </table>
+
+        <!-- ── 시스템 설정 ─────────────────────────────────────────── -->
+        <div style="font-size:14px;font-weight:700;margin-top:28px;margin-bottom:4px">시스템 설정</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:14px">ASR / LLM 엔드포인트 설정 (DB에 저장되어 env 기본값을 덮어씁니다)</div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" id="sys-settings-grid">
+
+          <!-- ASR -->
+          <div style="border:1px solid var(--border);border-radius:8px;padding:16px">
+            <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--accent)">ASR (음성 인식)</div>
+            <div style="margin-bottom:8px">
+              <div style="font-size:11px;color:var(--text2);margin-bottom:3px">OpenAI API Key (설정 시 Whisper 사용)</div>
+              <input class="input" id="cfg-OPENAI_API_KEY" type="password" placeholder="sk-... (미입력 시 유지)" style="width:100%">
+            </div>
+            <div style="margin-bottom:8px">
+              <div style="font-size:11px;color:var(--text2);margin-bottom:3px">HTTP ASR 엔드포인트 URL</div>
+              <input class="input" id="cfg-ASR_API_URL" placeholder="http://asr-server:9000/transcribe" style="width:100%">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div>
+                <div style="font-size:11px;color:var(--text2);margin-bottom:3px">ASR API Key</div>
+                <input class="input" id="cfg-ASR_API_KEY" type="password" placeholder="(없으면 공백)" style="width:100%">
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--text2);margin-bottom:3px">파일 필드명</div>
+                <input class="input" id="cfg-ASR_FILE_FIELD" placeholder="file" style="width:100%">
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--text2);margin-bottom:3px">응답 텍스트 필드</div>
+                <input class="input" id="cfg-ASR_RESPONSE_FIELD" placeholder="text" style="width:100%">
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--text2);margin-bottom:3px">타임아웃 (초)</div>
+                <input class="input" id="cfg-ASR_TIMEOUT" type="number" placeholder="7200" style="width:100%">
+              </div>
+            </div>
+          </div>
+
+          <!-- LLM -->
+          <div style="border:1px solid var(--border);border-radius:8px;padding:16px">
+            <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--accent)">LLM (회의록 생성)</div>
+            <div style="margin-bottom:8px">
+              <div style="font-size:11px;color:var(--text2);margin-bottom:3px">Anthropic API Key (설정 시 Claude 사용)</div>
+              <input class="input" id="cfg-ANTHROPIC_API_KEY" type="password" placeholder="sk-ant-... (미입력 시 유지)" style="width:100%">
+            </div>
+            <div style="margin-bottom:8px">
+              <div style="font-size:11px;color:var(--text2);margin-bottom:3px">Anthropic 모델</div>
+              <input class="input" id="cfg-ANTHROPIC_MODEL" placeholder="claude-sonnet-4-6" style="width:100%">
+            </div>
+            <div style="margin-bottom:8px">
+              <div style="font-size:11px;color:var(--text2);margin-bottom:3px">OpenAI 호환 LLM 엔드포인트 URL</div>
+              <input class="input" id="cfg-LLM_API_BASE_URL" placeholder="http://llm-server:8000/v1" style="width:100%">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div>
+                <div style="font-size:11px;color:var(--text2);margin-bottom:3px">LLM API Key</div>
+                <input class="input" id="cfg-LLM_API_KEY" type="password" placeholder="(없으면 공백)" style="width:100%">
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--text2);margin-bottom:3px">모델명</div>
+                <input class="input" id="cfg-LLM_MODEL" placeholder="gpt-4o" style="width:100%">
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--text2);margin-bottom:3px">타임아웃 (초)</div>
+                <input class="input" id="cfg-LLM_TIMEOUT" type="number" placeholder="120" style="width:100%">
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+          <button class="btn btn-primary btn-sm" onclick="saveSystemSettings()">설정 저장</button>
+          <span id="settings-save-msg" style="font-size:12px;color:var(--text2)"></span>
+        </div>
       </div>
     </div>
 
@@ -1050,7 +1124,54 @@ async function loadAdminStats() {
         <td><button class="btn btn-ghost btn-sm" onclick="deactivateUser(${u.id})">${u.is_active ? '비활성화' : '활성화'}</button></td>`;
       tbody.appendChild(tr);
     });
+    await loadSystemSettings();
   } catch (e) { toast('관리자 데이터 로드 실패: ' + e.message, 'err'); }
+}
+
+async function loadSystemSettings() {
+  try {
+    const cfg = await api('GET', '/admin/settings');
+    if (!cfg) return;
+    const masked = ['OPENAI_API_KEY','ANTHROPIC_API_KEY','ASR_API_KEY','LLM_API_KEY'];
+    for (const [k, v] of Object.entries(cfg)) {
+      const el = document.getElementById('cfg-' + k);
+      if (!el) continue;
+      // Don't prefill masked password fields
+      if (masked.includes(k)) {
+        el.placeholder = v ? '••••••••  (변경하려면 입력)' : '(미설정)';
+      } else {
+        el.value = v || '';
+      }
+    }
+  } catch (e) { /* non-critical */ }
+}
+
+async function saveSystemSettings() {
+  const keys = [
+    'OPENAI_API_KEY','ASR_API_URL','ASR_API_KEY','ASR_FILE_FIELD',
+    'ASR_RESPONSE_FIELD','ASR_TIMEOUT',
+    'ANTHROPIC_API_KEY','ANTHROPIC_MODEL',
+    'LLM_API_BASE_URL','LLM_API_KEY','LLM_MODEL','LLM_TIMEOUT',
+  ];
+  const payload = {};
+  for (const k of keys) {
+    const el = document.getElementById('cfg-' + k);
+    if (!el) continue;
+    const v = el.value.trim();
+    if (v !== '') payload[k] = v;  // only send fields that were filled in
+  }
+  try {
+    await api('PATCH', '/admin/settings', payload);
+    document.getElementById('settings-save-msg').textContent = '저장되었습니다.';
+    setTimeout(() => { document.getElementById('settings-save-msg').textContent = ''; }, 3000);
+    // Clear password fields after save
+    ['cfg-OPENAI_API_KEY','cfg-ANTHROPIC_API_KEY','cfg-ASR_API_KEY','cfg-LLM_API_KEY'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    await loadSystemSettings();
+    toast('시스템 설정이 저장되었습니다.', 'ok');
+  } catch (e) { toast('설정 저장 실패: ' + e.message, 'err'); }
 }
 
 async function createUser() {
