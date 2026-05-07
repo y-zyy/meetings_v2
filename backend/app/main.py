@@ -45,6 +45,7 @@ async def _seed_admin():
     from app.models.user import User
     from app.core.security import hash_password
 
+    log = logging.getLogger(__name__)
     async with AsyncSessionLocal() as db:
         existing = (await db.execute(select(User).where(User.username == settings.ADMIN_USERNAME))).scalar_one_or_none()
         if not existing:
@@ -57,7 +58,20 @@ async def _seed_admin():
             )
             db.add(admin)
             await db.commit()
-            logging.getLogger(__name__).info("Admin user '%s' created.", settings.ADMIN_USERNAME)
+            log.info("Admin user '%s' created.", settings.ADMIN_USERNAME)
+        else:
+            # Restore admin account if it was deactivated or its role was changed
+            changed = False
+            if not existing.is_active:
+                existing.is_active = True
+                changed = True
+                log.warning("Admin user '%s' was inactive — re-activating.", settings.ADMIN_USERNAME)
+            if existing.role != "admin":
+                existing.role = "admin"
+                changed = True
+                log.warning("Admin user '%s' had wrong role — restoring to 'admin'.", settings.ADMIN_USERNAME)
+            if changed:
+                await db.commit()
 
 
 @app.get("/api/health")
