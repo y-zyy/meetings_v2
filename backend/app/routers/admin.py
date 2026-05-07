@@ -94,6 +94,19 @@ async def update_user(
     user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+
+    # Guard: prevent revoking the last active admin's privileges
+    demoting = user.role == "admin" and (
+        (payload.role is not None and payload.role != "admin")
+        or (payload.is_active is not None and not payload.is_active)
+    )
+    if demoting:
+        admin_count = (await db.execute(
+            select(func.count()).select_from(User).where(User.role == "admin", User.is_active == True)  # noqa: E712
+        )).scalar_one()
+        if admin_count <= 1:
+            raise HTTPException(status_code=400, detail="마지막 관리자 계정의 권한을 변경할 수 없습니다.")
+
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(user, field, value)
     await db.commit()
@@ -108,6 +121,12 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db), current_
     user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+    if user.role == "admin":
+        admin_count = (await db.execute(
+            select(func.count()).select_from(User).where(User.role == "admin", User.is_active == True)  # noqa: E712
+        )).scalar_one()
+        if admin_count <= 1:
+            raise HTTPException(status_code=400, detail="마지막 관리자 계정은 삭제할 수 없습니다.")
     await db.delete(user)
     await db.commit()
 
