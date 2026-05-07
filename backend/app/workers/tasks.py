@@ -25,6 +25,7 @@ def _get_meeting(session: Session, meeting_id: int):
 def process_meeting(self, meeting_id: int):
     from app.models.meeting import ActionItem, Decision, Meeting
     from app.services import asr, llm
+    from app.services.runtime_settings import get_effective_settings_sync
 
     with SyncSession() as session:
         meeting = _get_meeting(session, meeting_id)
@@ -32,13 +33,16 @@ def process_meeting(self, meeting_id: int):
             logger.error("Meeting %s not found", meeting_id)
             return
 
+        # Read effective settings (DB overrides > env defaults) once per job
+        effective = get_effective_settings_sync(session)
+
         try:
             # ── Step 1: ASR ───────────────────────────────────────────────
             meeting.status = "asr_processing"
             session.commit()
             logger.info("[%s] ASR 시작: %s", meeting_id, meeting.file_path)
 
-            transcript = asr.transcribe(meeting.file_path)
+            transcript = asr.transcribe(meeting.file_path, effective)
             meeting.transcript = transcript
             session.commit()
             logger.info("[%s] ASR 완료 (%d chars)", meeting_id, len(transcript))
@@ -55,6 +59,7 @@ def process_meeting(self, meeting_id: int):
                 attendees=meeting.attendees,
                 agenda=meeting.agenda,
                 transcript=transcript,
+                effective=effective,
             )
 
             meeting.summary = result.get("summary", "")
