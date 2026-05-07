@@ -23,6 +23,7 @@ def _get_meeting(session: Session, meeting_id: int):
 
 @celery_app.task(bind=True, name="process_meeting", max_retries=2)
 def process_meeting(self, meeting_id: int):
+    from app.models.user import User  # noqa: F401 — registers User mapper for Meeting.owner relationship
     from app.models.meeting import ActionItem, Decision, Meeting
     from app.services import asr, llm
     from app.services.runtime_settings import get_effective_settings_sync
