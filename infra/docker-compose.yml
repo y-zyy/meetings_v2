@@ -87,7 +87,7 @@ services:
     image: nginx:alpine
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "0.0.0.0:8080:80"
     depends_on:
       api:
         condition: service_healthy
