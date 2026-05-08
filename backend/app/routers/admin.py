@@ -23,6 +23,9 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 @router.get("/stats")
 async def get_stats(db: AsyncSession = Depends(get_db), _=Depends(get_admin_user)):
     user_count = (await db.execute(select(func.count()).select_from(User))).scalar_one()
+    pending_count = (await db.execute(
+        select(func.count()).select_from(User).where(User.is_active == False)  # noqa: E712
+    )).scalar_one()
     meeting_count = (await db.execute(select(func.count()).select_from(Meeting))).scalar_one()
     done_count = (await db.execute(select(func.count()).select_from(Meeting).where(Meeting.status == "done"))).scalar_one()
     failed_count = (await db.execute(select(func.count()).select_from(Meeting).where(Meeting.status == "failed"))).scalar_one()
@@ -40,6 +43,7 @@ async def get_stats(db: AsyncSession = Depends(get_db), _=Depends(get_admin_user
 
     return {
         "user_count": user_count,
+        "pending_count": pending_count,
         "meeting_count": meeting_count,
         "done_count": done_count,
         "failed_count": failed_count,
