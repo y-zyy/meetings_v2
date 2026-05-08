@@ -37,6 +37,17 @@ input,select,textarea{font-family:var(--font);}
 .login-logo{font-size:22px;font-weight:800;letter-spacing:2px;font-family:'Arial Black','Arial',sans-serif;text-transform:uppercase;margin-bottom:4px;}
 .login-sub{font-size:10px;font-weight:600;letter-spacing:2.5px;color:#1B1464;margin-bottom:28px;font-family:Arial,sans-serif;text-transform:uppercase;}
 .login-err{font-size:12px;color:var(--red);margin-bottom:10px;min-height:18px;}
+.login-ok{font-size:12px;color:#16a34a;margin-bottom:10px;min-height:18px;}
+.login-tab{display:flex;gap:0;margin-bottom:24px;border-bottom:2px solid #e5e7eb;}
+.login-tab button{flex:1;padding:8px 0;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;color:#9ca3af;border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s;}
+.login-tab button.active{color:#1B1464;border-bottom-color:#1B1464;}
+.email-input-wrap{display:flex;align-items:center;gap:0;}
+.email-input-wrap .input{flex:1;border-radius:6px 0 0 6px;}
+.email-suffix{background:#f3f4f6;border:1px solid #d1d5db;border-left:none;border-radius:0 6px 6px 0;padding:0 10px;font-size:13px;color:#6b7280;white-space:nowrap;display:flex;align-items:center;height:36px;}
+.check-btn{font-size:11px;padding:4px 10px;margin-left:6px;white-space:nowrap;}
+.check-ok{color:#16a34a;font-size:11px;margin-top:3px;}
+.check-err{color:var(--red);font-size:11px;margin-top:3px;}
+.admin-badge{display:inline-flex;align-items:center;justify-content:center;background:#ef4444;color:#fff;border-radius:99px;font-size:9px;font-weight:700;min-width:16px;height:16px;padding:0 4px;margin-left:4px;}
 
 /* SIDEBAR */
 .sidebar{width:var(--sidebar-w);flex-shrink:0;background:#1B1464;display:flex;flex-direction:column;align-items:stretch;height:100%;padding:12px 0 16px;gap:2px;z-index:50;}
@@ -222,13 +233,64 @@ select.input{appearance:none;cursor:pointer;}
 
 <!-- ── LOGIN OVERLAY ────────────────────────────────────────────────────── -->
 <div id="login-overlay">
-  <div class="login-box">
+  <div class="login-box" style="width:420px;">
     <div class="login-logo"><span style="color:#1B1464;">KA</span><span style="color:#8a8a8a;">I</span><span style="color:#1B1464;"> MEET</span><span style="color:#8a8a8a;">I</span><span style="color:#1B1464;">NGS</span></div>
     <div class="login-sub">Korea Aerospace Industries, Ltd.</div>
-    <div class="field"><div class="field-label">아이디</div><input class="input" id="login-username" placeholder="사용자 이름" autocomplete="username"></div>
-    <div class="field"><div class="field-label">비밀번호</div><input class="input" id="login-password" type="password" placeholder="비밀번호" autocomplete="current-password"></div>
-    <div class="login-err" id="login-err"></div>
-    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()">로그인</button>
+
+    <!-- 탭 -->
+    <div class="login-tab">
+      <button id="tab-login" class="active" onclick="switchTab('login')">로그인</button>
+      <button id="tab-register" onclick="switchTab('register')">회원가입</button>
+    </div>
+
+    <!-- 로그인 폼 -->
+    <div id="login-form-wrap">
+      <div class="field"><div class="field-label">아이디</div><input class="input" id="login-username" placeholder="아이디 (이메일 앞부분)" autocomplete="username"></div>
+      <div class="field"><div class="field-label">비밀번호</div><input class="input" id="login-password" type="password" placeholder="비밀번호" autocomplete="current-password"></div>
+      <div class="login-err" id="login-err"></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()">로그인</button>
+    </div>
+
+    <!-- 회원가입 폼 -->
+    <div id="register-form-wrap" style="display:none;">
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:12px;color:#1d4ed8;line-height:1.5;">
+        ⚠ 아이디는 <b>@mygroup.com</b> 이메일만 사용 가능합니다.<br>
+        가입 후 <b>관리자 승인</b>이 완료되면 로그인할 수 있습니다.
+      </div>
+
+      <div class="field">
+        <div class="field-label">아이디 <span style="color:#6b7280;font-weight:400;">(이메일 앞부분)</span></div>
+        <div style="display:flex;align-items:flex-start;gap:6px;">
+          <div style="flex:1;">
+            <div class="email-input-wrap">
+              <input class="input" id="reg-username" placeholder="예: hong.gildong" autocomplete="off" oninput="resetUsernameCheck()">
+              <span class="email-suffix">@mygroup.com</span>
+            </div>
+            <div id="reg-username-msg" style="font-size:11px;margin-top:3px;min-height:14px;"></div>
+          </div>
+          <button class="btn btn-ghost btn-sm check-btn" onclick="checkUsername()" style="margin-top:1px;">중복 확인</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label">이름</div>
+        <input class="input" id="reg-fullname" placeholder="실명을 입력하세요" autocomplete="name">
+      </div>
+
+      <div class="field">
+        <div class="field-label">비밀번호 <span style="color:#6b7280;font-weight:400;">(6자 이상)</span></div>
+        <input class="input" id="reg-password" type="password" placeholder="비밀번호" autocomplete="new-password">
+      </div>
+
+      <div class="field">
+        <div class="field-label">비밀번호 확인</div>
+        <input class="input" id="reg-password2" type="password" placeholder="비밀번호를 다시 입력하세요" autocomplete="new-password">
+      </div>
+
+      <div class="login-err" id="register-err"></div>
+      <div class="login-ok" id="register-ok" style="display:none;"></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doRegister()">회원가입 신청</button>
+    </div>
   </div>
 </div>
 
@@ -260,7 +322,7 @@ select.input{appearance:none;cursor:pointer;}
   <div class="sb-bottom">
     <button class="sb-item" id="sb-admin" onclick="setNav(this,'admin')" title="관리자" style="display:none;">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8.325 2.317a.75.75 0 01.734-.617h1.882a.75.75 0 01.734.617l.18 1.044a5.96 5.96 0 011.4.813l1-.377a.75.75 0 01.916.3l.941 1.63a.75.75 0 01-.163.97l-.824.7a6.02 6.02 0 010 1.606l.824.7a.75.75 0 01.163.97l-.94 1.63a.75.75 0 01-.917.3l-1-.377a5.96 5.96 0 01-1.4.813l-.18 1.044a.75.75 0 01-.734.617H9.06a.75.75 0 01-.734-.617l-.18-1.044a5.96 5.96 0 01-1.4-.813l-1 .377a.75.75 0 01-.917-.3l-.94-1.63a.75.75 0 01.163-.97l.824-.7a6.02 6.02 0 010-1.606l-.824-.7a.75.75 0 01-.163-.97l.94-1.63a.75.75 0 01.917-.3l1 .377a5.96 5.96 0 011.4-.813l.18-1.044z"/><circle cx="10" cy="10" r="2.25"/></svg>
-      <span>관리자</span>
+      <span>관리자</span><span id="sb-admin-badge" class="admin-badge" style="display:none;"></span>
     </button>
     <div style="width:calc(100% - 16px);margin:6px 8px 0;background:rgba(255,255,255,.15);border-radius:8px;padding:8px 12px;" id="sb-user-card">
       <div style="font-size:11px;font-weight:700;color:#fff;" id="sb-fullname">-</div>
@@ -533,8 +595,13 @@ select.input{appearance:none;cursor:pointer;}
           <select class="input" id="new-user-role" style="width:90px;"><option value="user">일반</option><option value="admin">관리자</option></select>
           <button class="btn btn-primary btn-sm" onclick="createUser()">추가</button>
         </div>
+        <!-- 승인 대기 사용자 알림 -->
+        <div id="pending-users-banner" style="display:none;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#92400e;">
+          ⏳ <b id="pending-users-count">0</b>명의 회원가입 신청이 승인을 기다리고 있습니다.
+        </div>
+
         <table class="meeting-table" id="admin-user-table">
-          <thead><tr><th>아이디</th><th>이름</th><th>이메일</th><th>역할</th><th>가입일</th><th style="width:60px"></th></tr></thead>
+          <thead><tr><th>아이디</th><th>이름</th><th>이메일</th><th>역할</th><th>상태</th><th>가입일</th><th style="width:120px"></th></tr></thead>
           <tbody id="admin-user-tbody"></tbody>
         </table>
 
@@ -670,6 +737,16 @@ async function api(method, path, body, isJson = true) {
 }
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  const isLogin = tab === 'login';
+  document.getElementById('tab-login').classList.toggle('active', isLogin);
+  document.getElementById('tab-register').classList.toggle('active', !isLogin);
+  document.getElementById('login-form-wrap').style.display = isLogin ? '' : 'none';
+  document.getElementById('register-form-wrap').style.display = isLogin ? 'none' : '';
+  document.getElementById('login-err').textContent = '';
+  document.getElementById('register-err').textContent = '';
+}
+
 async function doLogin() {
   const username = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value;
@@ -690,6 +767,68 @@ async function doLogin() {
 }
 document.getElementById('login-password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
+let _usernameChecked = false;
+
+function resetUsernameCheck() {
+  _usernameChecked = false;
+  const msg = document.getElementById('reg-username-msg');
+  msg.textContent = '';
+  msg.className = '';
+}
+
+async function checkUsername() {
+  const username = document.getElementById('reg-username').value.trim().toLowerCase();
+  const msg = document.getElementById('reg-username-msg');
+  if (!username) { msg.textContent = '아이디를 입력해주세요.'; msg.className = 'check-err'; return; }
+  try {
+    const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(username)}`);
+    const data = await res.json();
+    if (data.available) {
+      msg.textContent = '✓ 사용 가능한 아이디입니다.';
+      msg.className = 'check-ok';
+      _usernameChecked = true;
+    } else {
+      msg.textContent = '✕ 이미 사용 중인 아이디입니다.';
+      msg.className = 'check-err';
+      _usernameChecked = false;
+    }
+  } catch { msg.textContent = '확인 중 오류가 발생했습니다.'; msg.className = 'check-err'; }
+}
+
+async function doRegister() {
+  const username = document.getElementById('reg-username').value.trim().toLowerCase();
+  const full_name = document.getElementById('reg-fullname').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const password2 = document.getElementById('reg-password2').value;
+  const errEl = document.getElementById('register-err');
+  const okEl = document.getElementById('register-ok');
+  errEl.textContent = ''; okEl.style.display = 'none';
+
+  if (!username) { errEl.textContent = '아이디를 입력해주세요.'; return; }
+  if (!_usernameChecked) { errEl.textContent = '아이디 중복 확인을 먼저 해주세요.'; return; }
+  if (!full_name) { errEl.textContent = '이름을 입력해주세요.'; return; }
+  if (!password) { errEl.textContent = '비밀번호를 입력해주세요.'; return; }
+  if (password !== password2) { errEl.textContent = '비밀번호가 일치하지 않습니다.'; return; }
+
+  try {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, full_name, password, password_confirm: password2 })
+    });
+    if (!res.ok) { const e = await res.json(); errEl.textContent = e.detail; return; }
+    okEl.textContent = '✓ 회원가입 신청이 완료되었습니다. 관리자 승인 후 로그인하실 수 있습니다.';
+    okEl.style.display = '';
+    // 입력 초기화
+    ['reg-username','reg-fullname','reg-password','reg-password2'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('reg-username-msg').textContent = '';
+    _usernameChecked = false;
+    setTimeout(() => switchTab('login'), 3000);
+  } catch (e) {
+    errEl.textContent = '서버에 연결할 수 없습니다.';
+  }
+}
+
 async function afterLogin() {
   try {
     _me = await api('GET', '/auth/me');
@@ -703,8 +842,27 @@ function acceptConsent() {
   document.getElementById('topbar-user').textContent = _me.full_name || _me.username;
   document.getElementById('sb-fullname').textContent = _me.full_name || _me.username;
   document.getElementById('sb-role').textContent = _me.role === 'admin' ? '관리자' : '일반 사용자';
-  if (_me.role === 'admin') document.getElementById('sb-admin').style.display = '';
+  if (_me.role === 'admin') {
+    document.getElementById('sb-admin').style.display = '';
+    checkPendingUsers();
+  }
   loadList();
+}
+
+async function checkPendingUsers() {
+  try {
+    const data = await api('GET', '/admin/stats');
+    if (!data) return;
+    const badge = document.getElementById('sb-admin-badge');
+    if (data.pending_count > 0) {
+      badge.textContent = data.pending_count;
+      badge.style.display = '';
+      // 대기 사용자가 있으면 관리자 페이지로 자동 이동
+      setNav(document.getElementById('sb-admin'), 'admin');
+    } else {
+      badge.style.display = 'none';
+    }
+  } catch { /* non-critical */ }
 }
 
 function declineConsent() {
@@ -720,6 +878,7 @@ function doLogout() {
   document.getElementById('login-overlay').classList.remove('hidden');
   document.getElementById('login-username').value = '';
   document.getElementById('login-password').value = '';
+  switchTab('login');
 }
 
 // ── Navigation ────────────────────────────────────────────────────────────────
@@ -1150,23 +1309,53 @@ async function loadAdminStats() {
     const gb = (data.storage_bytes / 1073741824).toFixed(2);
     document.getElementById('stat-storage').textContent = gb + ' GB';
 
+    // 승인 대기 배너 및 배지 업데이트
+    const badge = document.getElementById('sb-admin-badge');
+    const banner = document.getElementById('pending-users-banner');
+    if (data.pending_count > 0) {
+      badge.textContent = data.pending_count; badge.style.display = '';
+      document.getElementById('pending-users-count').textContent = data.pending_count;
+      banner.style.display = '';
+    } else {
+      badge.style.display = 'none';
+      banner.style.display = 'none';
+    }
+
     const users = await api('GET', '/admin/users');
     if (!users) return;
     const tbody = document.getElementById('admin-user-tbody');
     tbody.innerHTML = '';
     users.items.forEach(u => {
+      const isPending = !u.is_active;
+      const statusBadge = isPending
+        ? '<span style="color:#b45309;background:#fef3c7;border-radius:4px;padding:2px 6px;font-size:11px;font-weight:600;">승인 대기</span>'
+        : '<span style="color:#16a34a;background:#dcfce7;border-radius:4px;padding:2px 6px;font-size:11px;font-weight:600;">활성</span>';
+      const actionBtn = isPending
+        ? `<button class="btn btn-sm" style="background:#16a34a;color:#fff;border:none;padding:3px 10px;border-radius:5px;cursor:pointer;font-size:11px;" onclick="approveUser(${u.id})">승인</button>`
+        : `<button class="btn btn-ghost btn-sm" onclick="deactivateUser(${u.id})">비활성화</button>`;
       const tr = document.createElement('tr');
+      if (isPending) tr.style.background = '#fffbeb';
       tr.innerHTML = `
         <td>${esc(u.username)}</td>
         <td>${esc(u.full_name)}</td>
         <td>${esc(u.email)}</td>
         <td>${u.role === 'admin' ? '관리자' : '일반'}</td>
+        <td>${statusBadge}</td>
         <td>${u.created_at?.slice(0,10) || '-'}</td>
-        <td><button class="btn btn-ghost btn-sm" onclick="deactivateUser(${u.id})">${u.is_active ? '비활성화' : '활성화'}</button></td>`;
+        <td style="display:flex;gap:4px;">${actionBtn}</td>`;
       tbody.appendChild(tr);
     });
     await loadSystemSettings();
   } catch (e) { toast('관리자 데이터 로드 실패: ' + e.message, 'err'); }
+}
+
+async function approveUser(userId) {
+  if (!confirm('이 사용자의 가입을 승인하시겠습니까?')) return;
+  try {
+    await api('PATCH', `/admin/users/${userId}`, { is_active: true });
+    toast('사용자가 승인되었습니다.', 'ok');
+    loadAdminStats();
+  } catch (e) { toast('승인 실패: ' + e.message, 'err'); }
 }
 
 async function loadSystemSettings() {
@@ -1231,11 +1420,10 @@ async function createUser() {
 }
 
 async function deactivateUser(userId) {
-  if (!confirm('이 사용자를 비활성화/활성화하시겠습니까?')) return;
+  if (!confirm('이 사용자를 비활성화하시겠습니까?')) return;
   try {
-    const users = await api('GET', '/admin/users');
-    const u = users.items.find(x => x.id === userId);
-    await api('PATCH', `/admin/users/${userId}`, { is_active: !u?.is_active });
+    await api('PATCH', `/admin/users/${userId}`, { is_active: false });
+    toast('사용자가 비활성화되었습니다.', 'ok');
     loadAdminStats();
   } catch (e) { toast('실패: ' + e.message, 'err'); }
 }
