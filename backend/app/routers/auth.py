@@ -63,7 +63,7 @@ async def register(payload: UserRegister, db: AsyncSession = Depends(get_db)):
         full_name=payload.full_name,
         hashed_password=hash_password(payload.password),
         role="user",
-        is_active=False,  # 관리자 승인 후 활성화
+        is_active=True,
     )
     db.add(user)
     await db.commit()
