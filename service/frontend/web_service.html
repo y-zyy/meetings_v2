@@ -255,7 +255,7 @@ select.input{appearance:none;cursor:pointer;}
     <div id="register-form-wrap" style="display:none;">
       <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:12px;color:#1d4ed8;line-height:1.5;">
         ⚠ 아이디는 <b>@mygroup.com</b> 이메일만 사용 가능합니다.<br>
-        가입 후 <b>관리자 승인</b>이 완료되면 로그인할 수 있습니다.
+        가입 후 바로 로그인할 수 있습니다.
       </div>
 
       <div class="field">
@@ -289,7 +289,7 @@ select.input{appearance:none;cursor:pointer;}
 
       <div class="login-err" id="register-err"></div>
       <div class="login-ok" id="register-ok" style="display:none;"></div>
-      <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doRegister()">회원가입 신청</button>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doRegister()">회원가입</button>
     </div>
   </div>
 </div>
@@ -341,6 +341,7 @@ select.input{appearance:none;cursor:pointer;}
           <button class="list-tab active">나의 회의 목록</button>
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin:6px 0;">
+          <button id="bulk-delete-btn" class="btn btn-sm" style="display:none;background:#fef2f2;color:#ef4444;border:1px solid #fecaca;" onclick="bulkDelete()">선택 삭제 (<span id="bulk-delete-count">0</span>건)</button>
           <div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:7px 14px;">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" width="14" height="14"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg>
             <input placeholder="검색어를 입력해 주세요" id="search-input" oninput="scheduleSearch()" style="border:none;background:none;outline:none;font-size:13px;color:var(--text);width:200px;font-family:var(--font);">
@@ -350,10 +351,11 @@ select.input{appearance:none;cursor:pointer;}
       <div class="meeting-table-wrap" id="list-wrap">
         <table class="meeting-table" id="list-table">
           <thead><tr>
+            <th style="width:40px;padding-left:12px;"><input type="checkbox" id="select-all-cb" onclick="toggleSelectAll(this)" style="cursor:pointer;width:15px;height:15px;"></th>
             <th class="col-name">회의 이름</th>
-            <th class="col-dur">길이</th>
             <th class="col-date">생성일</th>
             <th style="width:80px">상태</th>
+            <th style="width:60px"></th>
           </tr></thead>
           <tbody id="list-tbody"></tbody>
         </table>
@@ -587,14 +589,6 @@ select.input{appearance:none;cursor:pointer;}
           <div class="stat-card"><div class="stat-value" id="stat-storage">-</div><div class="stat-label">스토리지</div></div>
         </div>
         <div style="font-size:14px;font-weight:700;margin-bottom:12px">사용자 관리</div>
-        <div style="display:flex;gap:8px;margin-bottom:12px;">
-          <input class="input" id="new-user-name" placeholder="아이디" style="width:140px;">
-          <input class="input" id="new-user-fullname" placeholder="이름" style="width:120px;">
-          <input class="input" type="email" id="new-user-email" placeholder="이메일" style="width:180px;">
-          <input class="input" type="password" id="new-user-pw" placeholder="비밀번호" style="width:120px;">
-          <select class="input" id="new-user-role" style="width:90px;"><option value="user">일반</option><option value="admin">관리자</option></select>
-          <button class="btn btn-primary btn-sm" onclick="createUser()">추가</button>
-        </div>
         <!-- 승인 대기 사용자 알림 -->
         <div id="pending-users-banner" style="display:none;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#92400e;">
           ⏳ <b id="pending-users-count">0</b>명의 회원가입 신청이 승인을 기다리고 있습니다.
@@ -645,14 +639,6 @@ select.input{appearance:none;cursor:pointer;}
           <!-- LLM -->
           <div style="border:1px solid var(--border);border-radius:8px;padding:16px">
             <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--accent)">LLM (회의록 생성)</div>
-            <div style="margin-bottom:8px">
-              <div style="font-size:11px;color:var(--text2);margin-bottom:3px">Anthropic API Key (설정 시 Claude 사용)</div>
-              <input class="input" id="cfg-ANTHROPIC_API_KEY" type="password" placeholder="sk-ant-... (미입력 시 유지)" style="width:100%">
-            </div>
-            <div style="margin-bottom:8px">
-              <div style="font-size:11px;color:var(--text2);margin-bottom:3px">Anthropic 모델</div>
-              <input class="input" id="cfg-ANTHROPIC_MODEL" placeholder="claude-sonnet-4-6" style="width:100%">
-            </div>
             <div style="margin-bottom:8px">
               <div style="font-size:11px;color:var(--text2);margin-bottom:3px">OpenAI 호환 LLM 엔드포인트 URL</div>
               <input class="input" id="cfg-LLM_API_BASE_URL" placeholder="http://llm-server:8000/v1" style="width:100%">
@@ -713,6 +699,7 @@ let _processingMeetingId = null;  // meeting being polled
 let _pollTimer = null;
 let _listPage = 1;
 let _searchTimer = null;
+let _selectedMeetings = new Set();
 
 // ── API helpers ───────────────────────────────────────────────────────────────
 async function api(method, path, body, isJson = true) {
@@ -817,7 +804,7 @@ async function doRegister() {
       body: JSON.stringify({ username, full_name, password, password_confirm: password2 })
     });
     if (!res.ok) { const e = await res.json(); errEl.textContent = e.detail; return; }
-    okEl.textContent = '✓ 회원가입 신청이 완료되었습니다. 관리자 승인 후 로그인하실 수 있습니다.';
+    okEl.textContent = '✓ 회원가입이 완료되었습니다. 로그인하실 수 있습니다.';
     okEl.style.display = '';
     // 입력 초기화
     ['reg-username','reg-fullname','reg-password','reg-password2'].forEach(id => document.getElementById(id).value = '');
@@ -931,16 +918,21 @@ function renderList(data) {
   const tbody = document.getElementById('list-tbody');
   const empty = document.getElementById('list-empty');
   tbody.innerHTML = '';
+  _selectedMeetings.clear();
+  const allCb = document.getElementById('select-all-cb');
+  if (allCb) allCb.checked = false;
+  updateBulkDeleteBtn();
   if (!data.items.length) { empty.style.display = 'flex'; return; }
   empty.style.display = 'none';
   data.items.forEach(m => {
     const [label, cls] = STATUS_LABELS[m.status] || [m.status, 'b-queue'];
     const tr = document.createElement('tr');
     tr.innerHTML = `
+      <td style="width:40px;padding-left:12px;"><input type="checkbox" class="row-cb" value="${m.id}" onclick="event.stopPropagation();onRowCheck(this)" style="cursor:pointer;width:15px;height:15px;"></td>
       <td class="col-name">${esc(m.title)}</td>
-      <td class="col-dur">${fmtDuration(m.duration_seconds)}</td>
       <td class="col-date">${fmtDate(m.created_at)}</td>
-      <td><span class="badge ${cls}">${label}</span></td>`;
+      <td><span class="badge ${cls}">${label}</span></td>
+      <td style="width:60px;"><button class="btn btn-sm" style="background:#fef2f2;color:#ef4444;border:1px solid #fecaca;padding:3px 8px;font-size:11px;" onclick="event.stopPropagation();deleteMeeting(${m.id})">삭제</button></td>`;
     tr.onclick = () => openDetail(m.id, m.status);
     tbody.appendChild(tr);
   });
@@ -1330,9 +1322,10 @@ async function loadAdminStats() {
       const statusBadge = isPending
         ? '<span style="color:#b45309;background:#fef3c7;border-radius:4px;padding:2px 6px;font-size:11px;font-weight:600;">승인 대기</span>'
         : '<span style="color:#16a34a;background:#dcfce7;border-radius:4px;padding:2px 6px;font-size:11px;font-weight:600;">활성</span>';
-      const actionBtn = isPending
+      const approveBtn = isPending
         ? `<button class="btn btn-sm" style="background:#16a34a;color:#fff;border:none;padding:3px 10px;border-radius:5px;cursor:pointer;font-size:11px;" onclick="approveUser(${u.id})">승인</button>`
-        : `<button class="btn btn-ghost btn-sm" onclick="deactivateUser(${u.id})">비활성화</button>`;
+        : '';
+      const deleteBtn = `<button class="btn btn-ghost btn-sm" style="color:#ef4444;border-color:#fecaca;" onclick="deleteUser(${u.id})">삭제</button>`;
       const tr = document.createElement('tr');
       if (isPending) tr.style.background = '#fffbeb';
       tr.innerHTML = `
@@ -1342,7 +1335,7 @@ async function loadAdminStats() {
         <td>${u.role === 'admin' ? '관리자' : '일반'}</td>
         <td>${statusBadge}</td>
         <td>${u.created_at?.slice(0,10) || '-'}</td>
-        <td style="display:flex;gap:4px;">${actionBtn}</td>`;
+        <td style="display:flex;gap:4px;">${approveBtn}${deleteBtn}</td>`;
       tbody.appendChild(tr);
     });
     await loadSystemSettings();
@@ -1380,7 +1373,6 @@ async function saveSystemSettings() {
   const keys = [
     'OPENAI_API_KEY','ASR_API_URL','ASR_API_KEY','ASR_FILE_FIELD',
     'ASR_RESPONSE_FIELD','ASR_TIMEOUT',
-    'ANTHROPIC_API_KEY','ANTHROPIC_MODEL',
     'LLM_API_BASE_URL','LLM_API_KEY','LLM_MODEL','LLM_TIMEOUT',
   ];
   const payload = {};
@@ -1395,7 +1387,7 @@ async function saveSystemSettings() {
     document.getElementById('settings-save-msg').textContent = '저장되었습니다.';
     setTimeout(() => { document.getElementById('settings-save-msg').textContent = ''; }, 3000);
     // Clear password fields after save
-    ['cfg-OPENAI_API_KEY','cfg-ANTHROPIC_API_KEY','cfg-ASR_API_KEY','cfg-LLM_API_KEY'].forEach(id => {
+    ['cfg-OPENAI_API_KEY','cfg-ASR_API_KEY','cfg-LLM_API_KEY'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
@@ -1419,13 +1411,66 @@ async function createUser() {
   } catch (e) { toast('추가 실패: ' + e.message, 'err'); }
 }
 
-async function deactivateUser(userId) {
-  if (!confirm('이 사용자를 비활성화하시겠습니까?')) return;
+async function deleteUser(userId) {
+  if (!confirm('이 사용자를 삭제하시겠습니까? 사용자의 모든 데이터가 삭제됩니다.')) return;
   try {
-    await api('PATCH', `/admin/users/${userId}`, { is_active: false });
-    toast('사용자가 비활성화되었습니다.', 'ok');
+    await api('DELETE', `/admin/users/${userId}`);
+    toast('사용자가 삭제되었습니다.', 'ok');
     loadAdminStats();
-  } catch (e) { toast('실패: ' + e.message, 'err'); }
+  } catch (e) { toast('삭제 실패: ' + e.message, 'err'); }
+}
+
+async function deleteMeeting(id) {
+  if (!confirm('정말로 삭제하겠습니까? 회의록이 영구 삭제됩니다.')) return;
+  try {
+    await api('DELETE', `/meetings/${id}`);
+    toast('회의록이 삭제되었습니다.', 'ok');
+    _selectedMeetings.delete(id);
+    loadList();
+  } catch (e) { toast('삭제 실패: ' + e.message, 'err'); }
+}
+
+function toggleSelectAll(cb) {
+  const checkboxes = document.querySelectorAll('.row-cb');
+  checkboxes.forEach(box => {
+    box.checked = cb.checked;
+    const id = parseInt(box.value);
+    if (cb.checked) _selectedMeetings.add(id);
+    else _selectedMeetings.delete(id);
+  });
+  updateBulkDeleteBtn();
+}
+
+function onRowCheck(cb) {
+  const id = parseInt(cb.value);
+  if (cb.checked) _selectedMeetings.add(id);
+  else _selectedMeetings.delete(id);
+  const allBoxes = document.querySelectorAll('.row-cb');
+  const allCb = document.getElementById('select-all-cb');
+  if (allCb) allCb.checked = allBoxes.length > 0 && [...allBoxes].every(b => b.checked);
+  updateBulkDeleteBtn();
+}
+
+function updateBulkDeleteBtn() {
+  const btn = document.getElementById('bulk-delete-btn');
+  const countEl = document.getElementById('bulk-delete-count');
+  if (btn) btn.style.display = _selectedMeetings.size > 0 ? '' : 'none';
+  if (countEl) countEl.textContent = _selectedMeetings.size;
+}
+
+async function bulkDelete() {
+  if (_selectedMeetings.size === 0) return;
+  if (!confirm(`정말로 삭제하겠습니까? 회의록이 영구 삭제됩니다. (${_selectedMeetings.size}건)`)) return;
+  let successCount = 0;
+  for (const id of [..._selectedMeetings]) {
+    try {
+      await api('DELETE', `/meetings/${id}`);
+      successCount++;
+    } catch { /* continue */ }
+  }
+  _selectedMeetings.clear();
+  toast(`${successCount}개의 회의록이 삭제되었습니다.`, 'ok');
+  loadList();
 }
 
 // ── TOC ───────────────────────────────────────────────────────────────────────
