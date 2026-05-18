@@ -1,5 +1,6 @@
 """Generate DOCX, PDF, and TXT exports from a meeting record."""
 
+import html as _html
 import io
 from datetime import date
 
@@ -18,11 +19,29 @@ from reportlab.platypus import (
 )
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+
+# Register built-in ReportLab CID fonts for Korean
+pdfmetrics.registerFont(UnicodeCIDFont('HYGothic-Medium'))
+pdfmetrics.registerFont(UnicodeCIDFont('HYSMyeongJo-Medium'))
+
+_KO_FONT = 'HYGothic-Medium'
+_KO_FONT_BOLD = 'HYSMyeongJo-Medium'
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 def _fmt_date(d: date | None) -> str:
     return d.strftime("%Y-%m-%d") if d else "미지정"
+
+
+def _esc(text: str | None) -> str:
+    """HTML-escape text for use in ReportLab Paragraph (XML parser)."""
+    return _html.escape(str(text or ""))
+
+
+def _esc_lines(text: str | None) -> str:
+    """HTML-escape and convert newlines to <br/> for multi-line Paragraph."""
+    return _esc(text).replace("\n", "<br/>")
 
 
 def _fmt_duration(secs: int | None) -> str:
@@ -102,12 +121,12 @@ def build_pdf(meeting) -> bytes:
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=2*cm, rightMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
     styles = getSampleStyleSheet()
 
-    h1 = ParagraphStyle("H1", parent=styles["Heading1"], textColor=_ACCENT, fontSize=16, spaceAfter=10)
-    h2 = ParagraphStyle("H2", parent=styles["Heading2"], textColor=_ACCENT, fontSize=12, spaceBefore=14, spaceAfter=6)
-    body = ParagraphStyle("Body", parent=styles["Normal"], fontSize=10, leading=16)
+    h1 = ParagraphStyle("H1", parent=styles["Heading1"], textColor=_ACCENT, fontSize=16, spaceAfter=10, fontName=_KO_FONT)
+    h2 = ParagraphStyle("H2", parent=styles["Heading2"], textColor=_ACCENT, fontSize=12, spaceBefore=14, spaceAfter=6, fontName=_KO_FONT)
+    body = ParagraphStyle("Body", parent=styles["Normal"], fontSize=10, leading=16, fontName=_KO_FONT)
 
     story = []
-    story.append(Paragraph(meeting.title, h1))
+    story.append(Paragraph(_esc(meeting.title), h1))
     story.append(Spacer(1, 0.3*cm))
 
     meta_data = [
@@ -119,7 +138,8 @@ def build_pdf(meeting) -> bytes:
     meta_tbl = Table(meta_data, colWidths=[3*cm, 14*cm])
     meta_tbl.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#ECEEF9")),
-        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+        ("FONTNAME", (0, 0), (-1, -1), _KO_FONT),
+        ("FONTNAME", (0, 0), (0, -1), _KO_FONT_BOLD),
         ("FONTSIZE", (0, 0), (-1, -1), 9),
         ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#d2d5da")),
         ("ROWBACKGROUNDS", (0, 0), (-1, -1), [colors.white, colors.HexColor("#fafafa")]),
@@ -131,19 +151,19 @@ def build_pdf(meeting) -> bytes:
 
     if meeting.summary:
         story.append(Paragraph("주요 내용 요약", h2))
-        story.append(Paragraph(meeting.summary, body))
+        story.append(Paragraph(_esc_lines(meeting.summary), body))
 
     if meeting.decisions:
         story.append(Paragraph("결정 사항", h2))
         for d in meeting.decisions:
-            story.append(Paragraph(f"• {d.content}", body))
+            story.append(Paragraph(f"• {_esc(d.content)}", body))
 
     if meeting.action_items:
         story.append(Paragraph("액션 아이템", h2))
         ai_data = [["내용", "담당자", "기한", "상태"]]
         for item in meeting.action_items:
             ai_data.append([
-                item.content,
+                item.content or "-",
                 item.assignee or "-",
                 _fmt_date(item.due_date),
                 "완료" if item.status == "done" else "진행 중",
@@ -152,7 +172,8 @@ def build_pdf(meeting) -> bytes:
         ai_tbl.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), _ACCENT),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTNAME", (0, 0), (-1, -1), _KO_FONT),
+            ("FONTNAME", (0, 0), (-1, 0), _KO_FONT_BOLD),
             ("FONTSIZE", (0, 0), (-1, -1), 9),
             ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#d2d5da")),
             ("ROWBACKGROUNDS", (1, 0), (-1, -1), [colors.white, colors.HexColor("#fafafa")]),
@@ -163,7 +184,7 @@ def build_pdf(meeting) -> bytes:
 
     if meeting.transcript:
         story.append(Paragraph("발화 기록 (ASR)", h2))
-        story.append(Paragraph(meeting.transcript.replace("\n", "<br/>"), body))
+        story.append(Paragraph(_esc_lines(meeting.transcript), body))
 
     doc.build(story)
     return buf.getvalue()

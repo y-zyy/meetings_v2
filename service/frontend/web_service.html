@@ -296,7 +296,7 @@ select.input{appearance:none;cursor:pointer;}
 
 <!-- ── TOPBAR ────────────────────────────────────────────────────────────── -->
 <header class="topbar" style="padding:0 28px 0 16px;border-bottom:1px solid var(--border);">
-  <div style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.2;gap:3px;">
+  <div style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.2;gap:3px;cursor:pointer;" onclick="goHome()" title="홈으로 이동">
     <div style="font-size:28px;font-weight:800;letter-spacing:2px;font-family:'Arial Black','Arial',sans-serif;text-transform:uppercase;line-height:1;white-space:nowrap;">
       <span style="color:#1B1464;">KA</span><span style="color:#8a8a8a;">I</span><span style="color:#1B1464;"> MEET</span><span style="color:#8a8a8a;">I</span><span style="color:#1B1464;">NGS</span>
     </div>
@@ -314,7 +314,7 @@ select.input{appearance:none;cursor:pointer;}
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="8"/><path d="M10 6v8M6 10h8"/></svg>
     <span>새 회의</span>
   </button>
-  <button class="sb-item active" onclick="setNav(this,'my')" title="회의 목록">
+  <button id="sb-my" class="sb-item active" onclick="setNav(this,'my')" title="회의 목록">
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="3"/><path d="M7 8h6M7 12h4"/></svg>
     <span>회의 목록</span>
   </button>
@@ -353,8 +353,10 @@ select.input{appearance:none;cursor:pointer;}
           <thead><tr>
             <th style="width:40px;padding-left:12px;"><input type="checkbox" id="select-all-cb" onclick="toggleSelectAll(this)" style="cursor:pointer;width:15px;height:15px;"></th>
             <th class="col-name">회의 이름</th>
-            <th class="col-date">생성일</th>
+            <th style="width:100px;white-space:nowrap;">일시</th>
+            <th style="width:160px;">참석자</th>
             <th style="width:80px">상태</th>
+            <th style="width:72px;white-space:nowrap;">내보내기</th>
             <th style="width:60px"></th>
           </tr></thead>
           <tbody id="list-tbody"></tbody>
@@ -677,6 +679,10 @@ select.input{appearance:none;cursor:pointer;}
   <div class="modal">
     <div class="modal-title">회의록 내보내기</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:14px" id="export-meeting-title">-</div>
+    <div class="field" style="margin-bottom:14px;">
+      <div class="field-label">저장 파일 이름</div>
+      <input class="input" id="export-filename" placeholder="파일 이름을 입력하세요">
+    </div>
     <button class="export-btn" onclick="doExport('docx')"><div class="export-ext" style="background:#e8f0fe;color:#1a56db">DOC</div><div><div style="font-size:13px;font-weight:600">Microsoft Word (.docx)</div><div style="font-size:11px;color:var(--text3);margin-top:2px">표준 회의록 템플릿 적용</div></div></button>
     <button class="export-btn" onclick="doExport('pdf')"><div class="export-ext" style="background:#fef2f2;color:#b91c1c">PDF</div><div><div style="font-size:13px;font-weight:600">PDF 문서 (.pdf)</div><div style="font-size:11px;color:var(--text3);margin-top:2px">인쇄 및 배포용</div></div></button>
     <button class="export-btn" onclick="doExport('txt')"><div class="export-ext" style="background:var(--bg3);color:var(--text2)">TXT</div><div><div style="font-size:13px;font-weight:600">텍스트 파일 (.txt)</div><div style="font-size:11px;color:var(--text3);margin-top:2px">발화 원문 포함</div></div></button>
@@ -816,15 +822,20 @@ async function doRegister() {
   }
 }
 
-async function afterLogin() {
+async function afterLogin({ skipConsent = false } = {}) {
   try {
     _me = await api('GET', '/auth/me');
   } catch { doLogout(); return; }
   document.getElementById('login-overlay').classList.add('hidden');
-  document.getElementById('consent-overlay').classList.remove('hidden');
+  if (skipConsent || localStorage.getItem('kai_consent') === '1') {
+    acceptConsent();
+  } else {
+    document.getElementById('consent-overlay').classList.remove('hidden');
+  }
 }
 
 function acceptConsent() {
+  localStorage.setItem('kai_consent', '1');
   document.getElementById('consent-overlay').classList.add('hidden');
   document.getElementById('topbar-user').textContent = _me.full_name || _me.username;
   document.getElementById('sb-fullname').textContent = _me.full_name || _me.username;
@@ -861,6 +872,7 @@ function declineConsent() {
 function doLogout() {
   _token = null; _me = null;
   localStorage.removeItem('kai_token');
+  localStorage.removeItem('kai_consent');
   document.getElementById('consent-overlay').classList.add('hidden');
   document.getElementById('login-overlay').classList.remove('hidden');
   document.getElementById('login-username').value = '';
@@ -914,6 +926,18 @@ const STATUS_LABELS = {
   done: ['완료', 'b-done'], failed: ['실패', 'b-fail'],
 };
 
+function fmtDateOnly(iso) {
+  if (!iso) return '-';
+  return iso.slice(0, 10); // YYYY-MM-DD
+}
+
+function fmtAttendees(str) {
+  if (!str) return '-';
+  const names = str.split(',').map(s => s.trim()).filter(Boolean);
+  if (names.length <= 2) return esc(names.join(', '));
+  return esc(names.slice(0, 2).join(', ')) + ` <span style="color:var(--text3)">외 ${names.length - 2}명</span>`;
+}
+
 function renderList(data) {
   const tbody = document.getElementById('list-tbody');
   const empty = document.getElementById('list-empty');
@@ -926,12 +950,18 @@ function renderList(data) {
   empty.style.display = 'none';
   data.items.forEach(m => {
     const [label, cls] = STATUS_LABELS[m.status] || [m.status, 'b-queue'];
+    const isDone = m.status === 'done';
+    const exportBtn = isDone
+      ? `<button class="btn btn-sm" style="padding:3px 8px;font-size:11px;" onclick="event.stopPropagation();showExportForMeeting(${m.id},'${esc(m.title).replace(/'/g,'&#39;')}')">⬇ 저장</button>`
+      : `<button class="btn btn-sm" style="padding:3px 8px;font-size:11px;opacity:.35;cursor:not-allowed;" disabled>⬇ 저장</button>`;
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="width:40px;padding-left:12px;"><input type="checkbox" class="row-cb" value="${m.id}" onclick="event.stopPropagation();onRowCheck(this)" style="cursor:pointer;width:15px;height:15px;"></td>
       <td class="col-name">${esc(m.title)}</td>
-      <td class="col-date">${fmtDate(m.created_at)}</td>
+      <td style="white-space:nowrap;color:var(--text2);font-size:12px;">${fmtDateOnly(m.meeting_date)}</td>
+      <td style="font-size:12px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fmtAttendees(m.attendees)}</td>
       <td><span class="badge ${cls}">${label}</span></td>
+      <td>${exportBtn}</td>
       <td style="width:60px;"><button class="btn btn-sm" style="background:#fef2f2;color:#ef4444;border:1px solid #fecaca;padding:3px 8px;font-size:11px;" onclick="event.stopPropagation();deleteMeeting(${m.id})">삭제</button></td>`;
     tr.onclick = () => openDetail(m.id, m.status);
     tbody.appendChild(tr);
@@ -987,6 +1017,7 @@ function renderDetail(m) {
   document.getElementById('d-attendees').value = m.attendees;
   document.getElementById('d-summary').value = m.summary || '';
   document.getElementById('export-meeting-title').textContent = m.title;
+  document.getElementById('export-filename').value = m.title;
 
   const dl = document.getElementById('decisions-list');
   dl.innerHTML = '';
@@ -1269,11 +1300,54 @@ async function openProcessingResult() {
   await openDetail(_processingMeetingId, 'done');
 }
 
+// ── Navigation ────────────────────────────────────────────────────────────────
+function goHome() {
+  const myBtn = document.getElementById('sb-my');
+  setNav(myBtn, 'my');
+}
+
 // ── Export ────────────────────────────────────────────────────────────────────
 function showExport() { document.getElementById('export-modal').classList.add('open'); }
+
+function showExportForMeeting(id, title) {
+  _activeMeetingId = id;
+  document.getElementById('export-meeting-title').textContent = title;
+  document.getElementById('export-filename').value = title;
+  showExport();
+}
 function closeExport() { document.getElementById('export-modal').classList.remove('open'); }
+
+const _mimeMap = {
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  pdf:  'application/pdf',
+  txt:  'text/plain',
+};
+const _extDesc = {
+  docx: [{ description: 'Word 문서', accept: { 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'] } }],
+  pdf:  [{ description: 'PDF 문서',  accept: { 'application/pdf': ['.pdf'] } }],
+  txt:  [{ description: '텍스트 파일', accept: { 'text/plain': ['.txt'] } }],
+};
+
 async function doExport(fmt) {
+  const rawName = document.getElementById('export-filename').value.trim()
+    || document.getElementById('export-meeting-title').textContent;
+  const safeName = rawName.replace(/[/\\?%*:|"<>]/g, '_');
   closeExport();
+
+  // showSaveFilePicker은 user gesture 컨텍스트에서 즉시 호출해야 함 (fetch 전)
+  let fileHandle = null;
+  if (window.showSaveFilePicker) {
+    try {
+      fileHandle = await window.showSaveFilePicker({
+        suggestedName: `${safeName}.${fmt}`,
+        types: _extDesc[fmt],
+      });
+    } catch (err) {
+      if (err.name === 'AbortError') return; // 사용자가 취소
+      fileHandle = null; // 미지원 시 fallback
+    }
+  }
+
   toast(`${fmt.toUpperCase()} 생성 중...`, 'info');
   try {
     const res = await fetch(`/api/meetings/${_activeMeetingId}/export?fmt=${fmt}`, {
@@ -1281,11 +1355,20 @@ async function doExport(fmt) {
     });
     if (!res.ok) throw new Error(await res.text());
     const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `meeting.${fmt}`; a.click();
-    URL.revokeObjectURL(url);
-    toast(`${fmt.toUpperCase()} 다운로드 완료`, 'ok');
+
+    if (fileHandle) {
+      const writable = await fileHandle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      toast(`${fmt.toUpperCase()} 저장 완료`, 'ok');
+    } else {
+      // fallback: 브라우저 기본 다운로드
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `${safeName}.${fmt}`; a.click();
+      URL.revokeObjectURL(url);
+      toast(`${fmt.toUpperCase()} 다운로드 완료`, 'ok');
+    }
   } catch (e) { toast('내보내기 실패: ' + e.message, 'err'); }
 }
 document.getElementById('export-modal').addEventListener('click', function(e) { if (e.target === this) closeExport(); });
