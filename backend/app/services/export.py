@@ -1,5 +1,6 @@
 """Generate DOCX, PDF, and TXT exports from a meeting record."""
 
+import html as _html
 import io
 from datetime import date
 
@@ -31,6 +32,16 @@ _KO_FONT_BOLD = 'HYSMyeongJo-Medium'
 
 def _fmt_date(d: date | None) -> str:
     return d.strftime("%Y-%m-%d") if d else "미지정"
+
+
+def _esc(text: str | None) -> str:
+    """HTML-escape text for use in ReportLab Paragraph (XML parser)."""
+    return _html.escape(str(text or ""))
+
+
+def _esc_lines(text: str | None) -> str:
+    """HTML-escape and convert newlines to <br/> for multi-line Paragraph."""
+    return _esc(text).replace("\n", "<br/>")
 
 
 def _fmt_duration(secs: int | None) -> str:
@@ -115,7 +126,7 @@ def build_pdf(meeting) -> bytes:
     body = ParagraphStyle("Body", parent=styles["Normal"], fontSize=10, leading=16, fontName=_KO_FONT)
 
     story = []
-    story.append(Paragraph(meeting.title, h1))
+    story.append(Paragraph(_esc(meeting.title), h1))
     story.append(Spacer(1, 0.3*cm))
 
     meta_data = [
@@ -140,19 +151,19 @@ def build_pdf(meeting) -> bytes:
 
     if meeting.summary:
         story.append(Paragraph("주요 내용 요약", h2))
-        story.append(Paragraph(meeting.summary, body))
+        story.append(Paragraph(_esc_lines(meeting.summary), body))
 
     if meeting.decisions:
         story.append(Paragraph("결정 사항", h2))
         for d in meeting.decisions:
-            story.append(Paragraph(f"• {d.content}", body))
+            story.append(Paragraph(f"• {_esc(d.content)}", body))
 
     if meeting.action_items:
         story.append(Paragraph("액션 아이템", h2))
         ai_data = [["내용", "담당자", "기한", "상태"]]
         for item in meeting.action_items:
             ai_data.append([
-                item.content,
+                item.content or "-",
                 item.assignee or "-",
                 _fmt_date(item.due_date),
                 "완료" if item.status == "done" else "진행 중",
@@ -173,7 +184,7 @@ def build_pdf(meeting) -> bytes:
 
     if meeting.transcript:
         story.append(Paragraph("발화 기록 (ASR)", h2))
-        story.append(Paragraph(meeting.transcript.replace("\n", "<br/>"), body))
+        story.append(Paragraph(_esc_lines(meeting.transcript), body))
 
     doc.build(story)
     return buf.getvalue()

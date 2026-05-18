@@ -820,15 +820,20 @@ async function doRegister() {
   }
 }
 
-async function afterLogin() {
+async function afterLogin({ skipConsent = false } = {}) {
   try {
     _me = await api('GET', '/auth/me');
   } catch { doLogout(); return; }
   document.getElementById('login-overlay').classList.add('hidden');
-  document.getElementById('consent-overlay').classList.remove('hidden');
+  if (skipConsent || localStorage.getItem('kai_consent') === '1') {
+    acceptConsent();
+  } else {
+    document.getElementById('consent-overlay').classList.remove('hidden');
+  }
 }
 
 function acceptConsent() {
+  localStorage.setItem('kai_consent', '1');
   document.getElementById('consent-overlay').classList.add('hidden');
   document.getElementById('topbar-user').textContent = _me.full_name || _me.username;
   document.getElementById('sb-fullname').textContent = _me.full_name || _me.username;
@@ -865,6 +870,7 @@ function declineConsent() {
 function doLogout() {
   _token = null; _me = null;
   localStorage.removeItem('kai_token');
+  localStorage.removeItem('kai_consent');
   document.getElementById('consent-overlay').classList.add('hidden');
   document.getElementById('login-overlay').classList.remove('hidden');
   document.getElementById('login-username').value = '';
@@ -1300,6 +1306,21 @@ async function doExport(fmt) {
     || document.getElementById('export-meeting-title').textContent;
   const safeName = rawName.replace(/[/\\?%*:|"<>]/g, '_');
   closeExport();
+
+  // showSaveFilePicker은 user gesture 컨텍스트에서 즉시 호출해야 함 (fetch 전)
+  let fileHandle = null;
+  if (window.showSaveFilePicker) {
+    try {
+      fileHandle = await window.showSaveFilePicker({
+        suggestedName: `${safeName}.${fmt}`,
+        types: _extDesc[fmt],
+      });
+    } catch (err) {
+      if (err.name === 'AbortError') return; // 사용자가 취소
+      fileHandle = null; // 미지원 시 fallback
+    }
+  }
+
   toast(`${fmt.toUpperCase()} 생성 중...`, 'info');
   try {
     const res = await fetch(`/api/meetings/${_activeMeetingId}/export?fmt=${fmt}`, {
@@ -1308,29 +1329,19 @@ async function doExport(fmt) {
     if (!res.ok) throw new Error(await res.text());
     const blob = await res.blob();
 
-    // 저장 위치 지정 (File System Access API 지원 브라우저)
-    if (window.showSaveFilePicker) {
-      try {
-        const handle = await window.showSaveFilePicker({
-          suggestedName: `${safeName}.${fmt}`,
-          types: _extDesc[fmt],
-        });
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-        toast(`${fmt.toUpperCase()} 저장 완료`, 'ok');
-        return;
-      } catch (err) {
-        if (err.name === 'AbortError') return; // 사용자가 취소
-        // 지원 안 되거나 오류 시 fallback
-      }
+    if (fileHandle) {
+      const writable = await fileHandle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      toast(`${fmt.toUpperCase()} 저장 완료`, 'ok');
+    } else {
+      // fallback: 브라우저 기본 다운로드
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `${safeName}.${fmt}`; a.click();
+      URL.revokeObjectURL(url);
+      toast(`${fmt.toUpperCase()} 다운로드 완료`, 'ok');
     }
-    // fallback: 브라우저 기본 다운로드
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `${safeName}.${fmt}`; a.click();
-    URL.revokeObjectURL(url);
-    toast(`${fmt.toUpperCase()} 다운로드 완료`, 'ok');
   } catch (e) { toast('내보내기 실패: ' + e.message, 'err'); }
 }
 document.getElementById('export-modal').addEventListener('click', function(e) { if (e.target === this) closeExport(); });
