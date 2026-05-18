@@ -353,8 +353,10 @@ select.input{appearance:none;cursor:pointer;}
           <thead><tr>
             <th style="width:40px;padding-left:12px;"><input type="checkbox" id="select-all-cb" onclick="toggleSelectAll(this)" style="cursor:pointer;width:15px;height:15px;"></th>
             <th class="col-name">회의 이름</th>
-            <th class="col-date">생성일</th>
+            <th style="width:100px;white-space:nowrap;">일시</th>
+            <th style="width:160px;">참석자</th>
             <th style="width:80px">상태</th>
+            <th style="width:72px;white-space:nowrap;">내보내기</th>
             <th style="width:60px"></th>
           </tr></thead>
           <tbody id="list-tbody"></tbody>
@@ -924,6 +926,18 @@ const STATUS_LABELS = {
   done: ['완료', 'b-done'], failed: ['실패', 'b-fail'],
 };
 
+function fmtDateOnly(iso) {
+  if (!iso) return '-';
+  return iso.slice(0, 10); // YYYY-MM-DD
+}
+
+function fmtAttendees(str) {
+  if (!str) return '-';
+  const names = str.split(',').map(s => s.trim()).filter(Boolean);
+  if (names.length <= 2) return esc(names.join(', '));
+  return esc(names.slice(0, 2).join(', ')) + ` <span style="color:var(--text3)">외 ${names.length - 2}명</span>`;
+}
+
 function renderList(data) {
   const tbody = document.getElementById('list-tbody');
   const empty = document.getElementById('list-empty');
@@ -936,12 +950,18 @@ function renderList(data) {
   empty.style.display = 'none';
   data.items.forEach(m => {
     const [label, cls] = STATUS_LABELS[m.status] || [m.status, 'b-queue'];
+    const isDone = m.status === 'done';
+    const exportBtn = isDone
+      ? `<button class="btn btn-sm" style="padding:3px 8px;font-size:11px;" onclick="event.stopPropagation();showExportForMeeting(${m.id},'${esc(m.title).replace(/'/g,'&#39;')}')">⬇ 저장</button>`
+      : `<button class="btn btn-sm" style="padding:3px 8px;font-size:11px;opacity:.35;cursor:not-allowed;" disabled>⬇ 저장</button>`;
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="width:40px;padding-left:12px;"><input type="checkbox" class="row-cb" value="${m.id}" onclick="event.stopPropagation();onRowCheck(this)" style="cursor:pointer;width:15px;height:15px;"></td>
       <td class="col-name">${esc(m.title)}</td>
-      <td class="col-date">${fmtDate(m.created_at)}</td>
+      <td style="white-space:nowrap;color:var(--text2);font-size:12px;">${fmtDateOnly(m.meeting_date)}</td>
+      <td style="font-size:12px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fmtAttendees(m.attendees)}</td>
       <td><span class="badge ${cls}">${label}</span></td>
+      <td>${exportBtn}</td>
       <td style="width:60px;"><button class="btn btn-sm" style="background:#fef2f2;color:#ef4444;border:1px solid #fecaca;padding:3px 8px;font-size:11px;" onclick="event.stopPropagation();deleteMeeting(${m.id})">삭제</button></td>`;
     tr.onclick = () => openDetail(m.id, m.status);
     tbody.appendChild(tr);
@@ -1288,6 +1308,13 @@ function goHome() {
 
 // ── Export ────────────────────────────────────────────────────────────────────
 function showExport() { document.getElementById('export-modal').classList.add('open'); }
+
+function showExportForMeeting(id, title) {
+  _activeMeetingId = id;
+  document.getElementById('export-meeting-title').textContent = title;
+  document.getElementById('export-filename').value = title;
+  showExport();
+}
 function closeExport() { document.getElementById('export-modal').classList.remove('open'); }
 
 const _mimeMap = {

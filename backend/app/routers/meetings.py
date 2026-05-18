@@ -152,6 +152,7 @@ async def list_meetings(
             "title": m.title,
             "meeting_date": m.meeting_date.isoformat() if m.meeting_date else None,
             "location": m.location,
+            "attendees": m.attendees,
             "status": m.status,
             "duration_seconds": m.duration_seconds,
             "file_name": m.file_name,
