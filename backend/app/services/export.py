@@ -18,6 +18,14 @@ from reportlab.platypus import (
 )
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+
+# Register built-in ReportLab CID fonts for Korean
+pdfmetrics.registerFont(UnicodeCIDFont('HYGoThic-Medium'))
+pdfmetrics.registerFont(UnicodeCIDFont('HYSMyeongJo-Medium'))
+
+_KO_FONT = 'HYGoThic-Medium'
+_KO_FONT_BOLD = 'HYSMyeongJo-Medium'
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -102,9 +110,9 @@ def build_pdf(meeting) -> bytes:
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=2*cm, rightMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
     styles = getSampleStyleSheet()
 
-    h1 = ParagraphStyle("H1", parent=styles["Heading1"], textColor=_ACCENT, fontSize=16, spaceAfter=10)
-    h2 = ParagraphStyle("H2", parent=styles["Heading2"], textColor=_ACCENT, fontSize=12, spaceBefore=14, spaceAfter=6)
-    body = ParagraphStyle("Body", parent=styles["Normal"], fontSize=10, leading=16)
+    h1 = ParagraphStyle("H1", parent=styles["Heading1"], textColor=_ACCENT, fontSize=16, spaceAfter=10, fontName=_KO_FONT)
+    h2 = ParagraphStyle("H2", parent=styles["Heading2"], textColor=_ACCENT, fontSize=12, spaceBefore=14, spaceAfter=6, fontName=_KO_FONT)
+    body = ParagraphStyle("Body", parent=styles["Normal"], fontSize=10, leading=16, fontName=_KO_FONT)
 
     story = []
     story.append(Paragraph(meeting.title, h1))
@@ -119,7 +127,8 @@ def build_pdf(meeting) -> bytes:
     meta_tbl = Table(meta_data, colWidths=[3*cm, 14*cm])
     meta_tbl.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#ECEEF9")),
-        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+        ("FONTNAME", (0, 0), (-1, -1), _KO_FONT),
+        ("FONTNAME", (0, 0), (0, -1), _KO_FONT_BOLD),
         ("FONTSIZE", (0, 0), (-1, -1), 9),
         ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#d2d5da")),
         ("ROWBACKGROUNDS", (0, 0), (-1, -1), [colors.white, colors.HexColor("#fafafa")]),
@@ -152,7 +161,8 @@ def build_pdf(meeting) -> bytes:
         ai_tbl.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), _ACCENT),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTNAME", (0, 0), (-1, -1), _KO_FONT),
+            ("FONTNAME", (0, 0), (-1, 0), _KO_FONT_BOLD),
             ("FONTSIZE", (0, 0), (-1, -1), 9),
             ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#d2d5da")),
             ("ROWBACKGROUNDS", (1, 0), (-1, -1), [colors.white, colors.HexColor("#fafafa")]),

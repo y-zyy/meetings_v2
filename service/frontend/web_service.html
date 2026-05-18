@@ -296,7 +296,7 @@ select.input{appearance:none;cursor:pointer;}
 
 <!-- ── TOPBAR ────────────────────────────────────────────────────────────── -->
 <header class="topbar" style="padding:0 28px 0 16px;border-bottom:1px solid var(--border);">
-  <div style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.2;gap:3px;">
+  <div style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.2;gap:3px;cursor:pointer;" onclick="setNav(document.querySelector('.sb-item[onclick*=\'my\']'),\'my\')" title="홈으로 이동">
     <div style="font-size:28px;font-weight:800;letter-spacing:2px;font-family:'Arial Black','Arial',sans-serif;text-transform:uppercase;line-height:1;white-space:nowrap;">
       <span style="color:#1B1464;">KA</span><span style="color:#8a8a8a;">I</span><span style="color:#1B1464;"> MEET</span><span style="color:#8a8a8a;">I</span><span style="color:#1B1464;">NGS</span>
     </div>
@@ -677,6 +677,10 @@ select.input{appearance:none;cursor:pointer;}
   <div class="modal">
     <div class="modal-title">회의록 내보내기</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:14px" id="export-meeting-title">-</div>
+    <div class="field" style="margin-bottom:14px;">
+      <div class="field-label">저장 파일 이름</div>
+      <input class="input" id="export-filename" placeholder="파일 이름을 입력하세요">
+    </div>
     <button class="export-btn" onclick="doExport('docx')"><div class="export-ext" style="background:#e8f0fe;color:#1a56db">DOC</div><div><div style="font-size:13px;font-weight:600">Microsoft Word (.docx)</div><div style="font-size:11px;color:var(--text3);margin-top:2px">표준 회의록 템플릿 적용</div></div></button>
     <button class="export-btn" onclick="doExport('pdf')"><div class="export-ext" style="background:#fef2f2;color:#b91c1c">PDF</div><div><div style="font-size:13px;font-weight:600">PDF 문서 (.pdf)</div><div style="font-size:11px;color:var(--text3);margin-top:2px">인쇄 및 배포용</div></div></button>
     <button class="export-btn" onclick="doExport('txt')"><div class="export-ext" style="background:var(--bg3);color:var(--text2)">TXT</div><div><div style="font-size:13px;font-weight:600">텍스트 파일 (.txt)</div><div style="font-size:11px;color:var(--text3);margin-top:2px">발화 원문 포함</div></div></button>
@@ -987,6 +991,7 @@ function renderDetail(m) {
   document.getElementById('d-attendees').value = m.attendees;
   document.getElementById('d-summary').value = m.summary || '';
   document.getElementById('export-meeting-title').textContent = m.title;
+  document.getElementById('export-filename').value = m.title;
 
   const dl = document.getElementById('decisions-list');
   dl.innerHTML = '';
@@ -1273,6 +1278,8 @@ async function openProcessingResult() {
 function showExport() { document.getElementById('export-modal').classList.add('open'); }
 function closeExport() { document.getElementById('export-modal').classList.remove('open'); }
 async function doExport(fmt) {
+  const rawName = document.getElementById('export-filename').value.trim() || document.getElementById('export-meeting-title').textContent;
+  const safeName = rawName.replace(/[/\\?%*:|"<>]/g, '_');
   closeExport();
   toast(`${fmt.toUpperCase()} 생성 중...`, 'info');
   try {
@@ -1283,7 +1290,7 @@ async function doExport(fmt) {
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = `meeting.${fmt}`; a.click();
+    a.href = url; a.download = `${safeName}.${fmt}`; a.click();
     URL.revokeObjectURL(url);
     toast(`${fmt.toUpperCase()} 다운로드 완료`, 'ok');
   } catch (e) { toast('내보내기 실패: ' + e.message, 'err'); }
