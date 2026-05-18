@@ -296,7 +296,7 @@ select.input{appearance:none;cursor:pointer;}
 
 <!-- ── TOPBAR ────────────────────────────────────────────────────────────── -->
 <header class="topbar" style="padding:0 28px 0 16px;border-bottom:1px solid var(--border);">
-  <div style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.2;gap:3px;cursor:pointer;" onclick="setNav(document.querySelector('.sb-item[onclick*=\'my\']'),\'my\')" title="홈으로 이동">
+  <div style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.2;gap:3px;cursor:pointer;" onclick="goHome()" title="홈으로 이동">
     <div style="font-size:28px;font-weight:800;letter-spacing:2px;font-family:'Arial Black','Arial',sans-serif;text-transform:uppercase;line-height:1;white-space:nowrap;">
       <span style="color:#1B1464;">KA</span><span style="color:#8a8a8a;">I</span><span style="color:#1B1464;"> MEET</span><span style="color:#8a8a8a;">I</span><span style="color:#1B1464;">NGS</span>
     </div>
@@ -314,7 +314,7 @@ select.input{appearance:none;cursor:pointer;}
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="8"/><path d="M10 6v8M6 10h8"/></svg>
     <span>새 회의</span>
   </button>
-  <button class="sb-item active" onclick="setNav(this,'my')" title="회의 목록">
+  <button id="sb-my" class="sb-item active" onclick="setNav(this,'my')" title="회의 목록">
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="3"/><path d="M7 8h6M7 12h4"/></svg>
     <span>회의 목록</span>
   </button>
@@ -1274,11 +1274,30 @@ async function openProcessingResult() {
   await openDetail(_processingMeetingId, 'done');
 }
 
+// ── Navigation ────────────────────────────────────────────────────────────────
+function goHome() {
+  const myBtn = document.getElementById('sb-my');
+  setNav(myBtn, 'my');
+}
+
 // ── Export ────────────────────────────────────────────────────────────────────
 function showExport() { document.getElementById('export-modal').classList.add('open'); }
 function closeExport() { document.getElementById('export-modal').classList.remove('open'); }
+
+const _mimeMap = {
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  pdf:  'application/pdf',
+  txt:  'text/plain',
+};
+const _extDesc = {
+  docx: [{ description: 'Word 문서', accept: { 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'] } }],
+  pdf:  [{ description: 'PDF 문서',  accept: { 'application/pdf': ['.pdf'] } }],
+  txt:  [{ description: '텍스트 파일', accept: { 'text/plain': ['.txt'] } }],
+};
+
 async function doExport(fmt) {
-  const rawName = document.getElementById('export-filename').value.trim() || document.getElementById('export-meeting-title').textContent;
+  const rawName = document.getElementById('export-filename').value.trim()
+    || document.getElementById('export-meeting-title').textContent;
   const safeName = rawName.replace(/[/\\?%*:|"<>]/g, '_');
   closeExport();
   toast(`${fmt.toUpperCase()} 생성 중...`, 'info');
@@ -1288,6 +1307,25 @@ async function doExport(fmt) {
     });
     if (!res.ok) throw new Error(await res.text());
     const blob = await res.blob();
+
+    // 저장 위치 지정 (File System Access API 지원 브라우저)
+    if (window.showSaveFilePicker) {
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: `${safeName}.${fmt}`,
+          types: _extDesc[fmt],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        toast(`${fmt.toUpperCase()} 저장 완료`, 'ok');
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return; // 사용자가 취소
+        // 지원 안 되거나 오류 시 fallback
+      }
+    }
+    // fallback: 브라우저 기본 다운로드
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = `${safeName}.${fmt}`; a.click();

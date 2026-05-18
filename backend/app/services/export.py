@@ -21,10 +21,10 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 
 # Register built-in ReportLab CID fonts for Korean
-pdfmetrics.registerFont(UnicodeCIDFont('HYGoThic-Medium'))
+pdfmetrics.registerFont(UnicodeCIDFont('HYGothic-Medium'))
 pdfmetrics.registerFont(UnicodeCIDFont('HYSMyeongJo-Medium'))
 
-_KO_FONT = 'HYGoThic-Medium'
+_KO_FONT = 'HYGothic-Medium'
 _KO_FONT_BOLD = 'HYSMyeongJo-Medium'
 
 # ── helpers ───────────────────────────────────────────────────────────────────
