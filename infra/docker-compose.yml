@@ -51,7 +51,7 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - uploads:/app/data/uploads
+      - ../data/uploads:/app/data/uploads   # 호스트 경로에 직접 저장
     networks:
       - internal
     healthcheck:
@@ -78,7 +78,7 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - uploads:/app/data/uploads
+      - ../data/uploads:/app/data/uploads   # 호스트 경로에 직접 저장
     networks:
       - internal
 
@@ -100,7 +100,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  uploads:
+  # uploads 볼륨은 bind mount로 대체되어 제거됨
 
 networks:
   internal:

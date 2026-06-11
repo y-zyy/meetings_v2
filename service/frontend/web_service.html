@@ -1140,13 +1140,9 @@ function clearFile() {
 
 // ── Recording ─────────────────────────────────────────────────────────────────
 async function startRec() {
-  // HTTPS 또는 localhost 환경 여부 확인
-  if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-    toast('마이크 사용을 위해서는 HTTPS 연결이 필요합니다.', 'err');
-    return;
-  }
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    toast('이 브라우저는 마이크 녹음을 지원하지 않습니다.', 'err');
+    // HTTP 환경에서 브라우저가 API 자체를 숨기는 경우
+    toast('마이크 API를 사용할 수 없습니다. Chrome이라면 주소창에 chrome://flags/#unsafely-treat-insecure-origin-as-secure 를 입력하고 이 사이트 주소를 추가한 뒤 재시작하세요.', 'err');
     return;
   }
   try {
