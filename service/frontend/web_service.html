@@ -1140,17 +1140,27 @@ function clearFile() {
 
 // ── Recording ─────────────────────────────────────────────────────────────────
 async function startRec() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    // HTTP 환경에서 브라우저가 API 자체를 숨기는 경우
+    toast('마이크 API를 사용할 수 없습니다. Chrome이라면 주소창에 chrome://flags/#unsafely-treat-insecure-origin-as-secure 를 입력하고 이 사이트 주소를 추가한 뒤 재시작하세요.', 'err');
+    return;
+  }
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    _mediaRecorder = new MediaRecorder(stream);
+
+    // 지원 가능한 mimeType 선택 (브라우저 호환성)
+    const mimeType = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/ogg','audio/mp4']
+      .find(t => MediaRecorder.isTypeSupported(t)) || '';
+    _mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
     _recChunks = [];
     _mediaRecorder.ondataavailable = e => { if (e.data.size > 0) _recChunks.push(e.data); };
     _mediaRecorder.onstop = () => {
-      const blob = new Blob(_recChunks, { type: 'audio/webm' });
-      showFile(new File([blob], `recording-${Date.now()}.webm`, { type: 'audio/webm' }));
+      const ext = (_mediaRecorder.mimeType || 'audio/webm').includes('ogg') ? 'ogg' : 'webm';
+      const blob = new Blob(_recChunks, { type: _mediaRecorder.mimeType || 'audio/webm' });
+      showFile(new File([blob], `recording-${Date.now()}.${ext}`, { type: blob.type }));
       stream.getTracks().forEach(t => t.stop());
     };
-    _mediaRecorder.start();
+    _mediaRecorder.start(1000); // 1초마다 chunk 수집
     _recSecs = 0;
     document.getElementById('rec-start').style.display = 'none';
     document.getElementById('rec-stop').style.display = 'block';
@@ -1163,7 +1173,17 @@ async function startRec() {
       const s = String(_recSecs%60).padStart(2,'0');
       document.getElementById('rec-clock').textContent = `${h}:${m}:${s}`;
     }, 1000);
-  } catch { toast('마이크 접근이 거부되었습니다.', 'err'); }
+  } catch (err) {
+    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      toast('마이크 권한이 거부되었습니다. 브라우저 주소창 왼쪽의 자물쇠(🔒) 아이콘을 클릭하여 마이크 권한을 허용해 주세요.', 'err');
+    } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+      toast('마이크를 찾을 수 없습니다. 마이크가 연결되어 있는지 확인해 주세요.', 'err');
+    } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+      toast('마이크가 다른 프로그램에서 사용 중입니다. 다른 프로그램을 종료 후 다시 시도해 주세요.', 'err');
+    } else {
+      toast('마이크 접근 실패: ' + (err.message || err.name), 'err');
+    }
+  }
 }
 
 function stopRec() {
