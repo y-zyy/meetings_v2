@@ -2,6 +2,7 @@
 
 import os
 import re
+import subprocess
 import uuid
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, UploadFile, status
@@ -79,15 +80,29 @@ async def upload_meeting(
     if len(content) > _MAX_BYTES:
         raise HTTPException(status_code=400, detail=f"파일 크기가 {settings.MAX_UPLOAD_SIZE_MB}MB를 초과합니다.")
 
-    # Persist file
-    safe_name = f"{uuid.uuid4().hex}{ext.lower()}"
-    # 회의 제목에서 파일시스템에 사용할 수 없는 문자 제거
+    # Persist file → FLAC 변환 후 저장
+    uid = uuid.uuid4().hex
     safe_title = re.sub(r'[\\/:*?"<>|]', '_', title).strip() or "untitled"
     dest_dir = os.path.join(settings.UPLOAD_DIR, str(current_user.id), safe_title)
     os.makedirs(dest_dir, exist_ok=True)
-    file_path = os.path.join(dest_dir, safe_name)
-    with open(file_path, "wb") as f:
+
+    # 원본을 임시 파일로 먼저 저장
+    tmp_path = os.path.join(dest_dir, f"{uid}{ext.lower()}")
+    with open(tmp_path, "wb") as f:
         f.write(content)
+
+    # ffmpeg으로 FLAC 변환
+    file_path = os.path.join(dest_dir, f"{uid}.flac")
+    try:
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", tmp_path, "-ar", "16000", "-ac", "1", file_path],
+            check=True, capture_output=True,
+        )
+        os.remove(tmp_path)  # 변환 성공 시 원본 임시 파일 삭제
+    except subprocess.CalledProcessError:
+        # 변환 실패 시 원본 유지
+        os.rename(tmp_path, os.path.join(dest_dir, f"{uid}{ext.lower()}"))
+        file_path = os.path.join(dest_dir, f"{uid}{ext.lower()}")
 
     # Parse date
     from datetime import date as DateType
