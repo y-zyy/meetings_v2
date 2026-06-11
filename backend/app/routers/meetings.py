@@ -1,6 +1,7 @@
 """Meeting CRUD + file upload + status polling + export."""
 
 import os
+import re
 import uuid
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, UploadFile, status
@@ -80,7 +81,9 @@ async def upload_meeting(
 
     # Persist file
     safe_name = f"{uuid.uuid4().hex}{ext.lower()}"
-    dest_dir = os.path.join(settings.UPLOAD_DIR, str(current_user.id))
+    # 회의 제목에서 파일시스템에 사용할 수 없는 문자 제거
+    safe_title = re.sub(r'[\\/:*?"<>|]', '_', title).strip() or "untitled"
+    dest_dir = os.path.join(settings.UPLOAD_DIR, str(current_user.id), safe_title)
     os.makedirs(dest_dir, exist_ok=True)
     file_path = os.path.join(dest_dir, safe_name)
     with open(file_path, "wb") as f:
