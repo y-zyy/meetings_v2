@@ -83,7 +83,7 @@ async def upload_meeting(
     # Persist file → FLAC 변환 후 저장
     uid = uuid.uuid4().hex
     safe_title = re.sub(r'[\\/:*?"<>|]', '_', title).strip() or "untitled"
-    dest_dir = os.path.join(settings.UPLOAD_DIR, str(current_user.id), safe_title)
+    dest_dir = os.path.join(settings.UPLOAD_DIR, current_user.username, safe_title)
     os.makedirs(dest_dir, exist_ok=True)
 
     # 원본을 임시 파일로 먼저 저장
