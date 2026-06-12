@@ -21,9 +21,8 @@ class SettingsPatch(BaseModel):
     LLM_API_KEY: str | None = None
     LLM_MODEL: str | None = None
     LLM_TIMEOUT: str | None = None
+    LLM_MAX_TOKENS: str | None = None
     OPENAI_API_KEY: str | None = None
-    ANTHROPIC_API_KEY: str | None = None
-    ANTHROPIC_MODEL: str | None = None
 
 
 @router.get("")
@@ -34,7 +33,7 @@ async def get_settings(
     effective = await get_effective_settings_async(db)
     # Mask key values — show only whether they are set
     masked = dict(effective)
-    for key in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "ASR_API_KEY", "LLM_API_KEY"):
+    for key in ("OPENAI_API_KEY", "ASR_API_KEY", "LLM_API_KEY"):
         if masked.get(key):
             masked[key] = "********"
     return masked
@@ -64,7 +63,7 @@ async def update_settings(
 
     effective = await get_effective_settings_async(db)
     masked = dict(effective)
-    for key in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "ASR_API_KEY", "LLM_API_KEY"):
+    for key in ("OPENAI_API_KEY", "ASR_API_KEY", "LLM_API_KEY"):
         if masked.get(key):
             masked[key] = "********"
     return masked

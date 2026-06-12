@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     LLM_API_KEY: str = ""
     LLM_MODEL: str = "gpt-4o"
     LLM_TIMEOUT: int = 120
+    LLM_MAX_TOKENS: int = 4096
 
     # Cloud inference keys (if set, take priority over local servers)
     OPENAI_API_KEY: str = ""           # Whisper ASR via OpenAI
