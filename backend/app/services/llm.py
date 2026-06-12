@@ -57,8 +57,7 @@ def generate_minutes(
     module-level settings object is used directly (backward-compat).
     """
     cfg = effective or {k: getattr(settings, k, "") for k in (
-        "ANTHROPIC_API_KEY", "ANTHROPIC_MODEL",
-        "LLM_API_BASE_URL", "LLM_API_KEY", "LLM_MODEL", "LLM_TIMEOUT",
+        "LLM_API_BASE_URL", "LLM_API_KEY", "LLM_MODEL", "LLM_TIMEOUT", "LLM_MAX_TOKENS",
     )}
 
     prompt = USER_PROMPT_TEMPLATE.format(
@@ -67,13 +66,10 @@ def generate_minutes(
         location=location,
         attendees=attendees,
         agenda=agenda,
-        transcript=transcript[:12000],
+        transcript=transcript,
     )
 
-    if cfg.get("ANTHROPIC_API_KEY"):
-        raw = _call_anthropic(prompt, cfg)
-    else:
-        raw = _call_openai(prompt, cfg)
+    raw = _call_openai(prompt, cfg)
 
     raw = re.sub(r"^```(?:json)?\s*", "", raw.strip(), flags=re.IGNORECASE)
     raw = re.sub(r"\s*```$", "", raw.strip())
@@ -84,26 +80,13 @@ def generate_minutes(
         return {"summary": raw, "decisions": [], "action_items": []}
 
 
-def _call_anthropic(prompt: str, cfg: dict) -> str:
-    import anthropic
-    timeout = int(cfg.get("LLM_TIMEOUT") or settings.LLM_TIMEOUT)
-    model = cfg.get("ANTHROPIC_MODEL") or settings.ANTHROPIC_MODEL
-    client = anthropic.Anthropic(api_key=cfg["ANTHROPIC_API_KEY"], timeout=timeout)
-    message = client.messages.create(
-        model=model,
-        max_tokens=4096,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    return message.content[0].text
-
-
 def _call_openai(prompt: str, cfg: dict) -> str:
     from openai import OpenAI
     base_url = cfg.get("LLM_API_BASE_URL") or settings.LLM_API_BASE_URL
     api_key = cfg.get("LLM_API_KEY") or "none"
     model = cfg.get("LLM_MODEL") or settings.LLM_MODEL
     timeout = int(cfg.get("LLM_TIMEOUT") or settings.LLM_TIMEOUT)
+    max_tokens = int(cfg.get("LLM_MAX_TOKENS") or settings.LLM_MAX_TOKENS)
 
     client = OpenAI(base_url=base_url, api_key=api_key, timeout=timeout)
     response = client.chat.completions.create(
@@ -113,5 +96,6 @@ def _call_openai(prompt: str, cfg: dict) -> str:
             {"role": "user", "content": prompt},
         ],
         temperature=0.2,
+        max_tokens=max_tokens,
     )
     return response.choices[0].message.content or ""
