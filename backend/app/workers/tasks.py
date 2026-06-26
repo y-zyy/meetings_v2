@@ -48,6 +48,44 @@ def process_meeting(self, meeting_id: int):
             session.commit()
             logger.info("[%s] ASR 완료 (%d chars)", meeting_id, len(transcript))
 
+            # ── Step 1.5: STT 후처리 ──────────────────────────────────────
+            meeting.status = "stt_postprocessing"
+            session.commit()
+            logger.info("[%s] STT 후처리 시작", meeting_id)
+
+            from app.models.glossary import AdminGlossaryTerm, UserGlossaryTerm
+            from app.services import asr_postprocess
+            from sqlalchemy import select as sa_select
+
+            admin_terms = [
+                (r.term + (f" ({r.description})" if r.description else ""))
+                for r in session.execute(sa_select(AdminGlossaryTerm).order_by(AdminGlossaryTerm.created_at)).scalars().all()
+            ]
+            user_terms = [
+                (r.term + (f" ({r.description})" if r.description else ""))
+                for r in session.execute(
+                    sa_select(UserGlossaryTerm)
+                    .where(UserGlossaryTerm.user_id == meeting.created_by)
+                    .order_by(UserGlossaryTerm.order, UserGlossaryTerm.created_at)
+                ).scalars().all()
+            ]
+
+            transcript = asr_postprocess.postprocess_transcript(
+                transcript=transcript,
+                title=meeting.title,
+                meeting_date=str(meeting.meeting_date) if meeting.meeting_date else "",
+                location=meeting.location,
+                attendees=meeting.attendees,
+                agenda=meeting.agenda,
+                notes=meeting.notes,
+                admin_terms=admin_terms,
+                user_terms=user_terms,
+                effective=effective,
+            )
+            meeting.transcript = transcript
+            session.commit()
+            logger.info("[%s] STT 후처리 완료 (%d chars)", meeting_id, len(transcript))
+
             # ── Step 2: LLM ───────────────────────────────────────────────
             meeting.status = "llm_processing"
             session.commit()
