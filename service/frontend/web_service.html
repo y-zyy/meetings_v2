@@ -735,6 +735,50 @@ select.input{appearance:none;cursor:pointer;}
           <span id="settings-save-msg" style="font-size:12px;color:var(--text2)"></span>
         </div>
 
+        <!-- ── 음성인식 교정 규칙 (Rule-based) ──────────────────────── -->
+        <div style="font-size:14px;font-weight:700;margin-top:32px;margin-bottom:4px">음성인식 교정 규칙 관리</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:14px">Aho-Corasick 기반 Rule-based 후처리입니다. 음성인식이 잘못 인식하는 표현과 올바른 표현을 등록하면 LLM 후처리 이전에 자동으로 교정됩니다.</div>
+
+        <div style="border:1px solid var(--border);border-radius:8px;padding:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div style="font-size:13px;font-weight:600;">등록된 규칙 <span id="correction-rules-count" style="color:var(--accent);font-weight:700;">0</span>개</div>
+          </div>
+          <div style="overflow-x:auto;margin-bottom:14px;">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;" id="correction-rules-table">
+              <thead>
+                <tr style="border-bottom:1px solid var(--border);color:var(--text3);">
+                  <th style="text-align:left;padding:6px 8px;font-weight:600;">오인식 표현</th>
+                  <th style="text-align:left;padding:6px 8px;font-weight:600;">→</th>
+                  <th style="text-align:left;padding:6px 8px;font-weight:600;">올바른 표현</th>
+                  <th style="text-align:left;padding:6px 8px;font-weight:600;">설명</th>
+                  <th style="padding:6px 8px;width:60px;"></th>
+                </tr>
+              </thead>
+              <tbody id="correction-rules-tbody">
+                <tr id="correction-rules-empty"><td colspan="5" style="text-align:center;padding:16px;color:var(--text3);">등록된 교정 규칙이 없습니다.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="border-top:1px solid var(--border);padding-top:14px;">
+            <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text2);">새 규칙 추가</div>
+            <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+              <div style="flex:1;min-width:140px;">
+                <div style="font-size:11px;color:var(--text2);margin-bottom:3px;">오인식 표현</div>
+                <input class="input" id="correction-wrong-input" placeholder="예: 인공지능" maxlength="200" style="width:100%">
+              </div>
+              <div style="flex:1;min-width:140px;">
+                <div style="font-size:11px;color:var(--text2);margin-bottom:3px;">올바른 표현</div>
+                <input class="input" id="correction-correct-input" placeholder="예: AI" maxlength="200" style="width:100%">
+              </div>
+              <div style="flex:2;min-width:180px;">
+                <div style="font-size:11px;color:var(--text2);margin-bottom:3px;">설명 (선택)</div>
+                <input class="input" id="correction-desc-input" placeholder="예: 약어, 고유명사 등" maxlength="200" style="width:100%" onkeydown="if(event.key==='Enter')addCorrectionRule()">
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="addCorrectionRule()" style="white-space:nowrap;">+ 규칙 추가</button>
+            </div>
+          </div>
+        </div>
+
         <!-- ── 전역 용어사전 ──────────────────────────────────────────── -->
         <div style="font-size:14px;font-weight:700;margin-top:32px;margin-bottom:4px">전역 용어사전 관리</div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:14px">모든 사용자의 STT 후처리에 적용되는 공통 용어사전입니다. 전문용어, 고유명사, 조직명 등을 등록하세요.</div>
@@ -1090,7 +1134,7 @@ function setNav(el, key) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(pageMap[key])?.classList.add('active');
   if (key === 'my') loadList();
-  if (key === 'admin') { loadAdminStats(); loadAdminGlossary(); }
+  if (key === 'admin') { loadAdminStats(); loadAdminGlossary(); loadCorrectionRules(); }
   if (key === 'new') resetNewForm();
   if (key === 'notices') loadNotices();
   if (key === 'qna') loadQna();
@@ -2032,6 +2076,105 @@ async function deleteUserTerm(id) {
     await api('DELETE', `/glossary/user/${id}`);
     loadUserGlossary();
   } catch (e) { toast('삭제 실패: ' + e.message, 'err'); }
+}
+
+// ── 음성인식 교정 규칙 (Rule-based) ──────────────────────────────────────────
+let _editingRuleId = null;
+
+async function loadCorrectionRules() {
+  try {
+    const data = await api('GET', '/glossary/admin/rules');
+    renderCorrectionRules(data.items, data.total);
+  } catch(e) {}
+}
+
+function renderCorrectionRules(items, total) {
+  document.getElementById('correction-rules-count').textContent = total;
+  const tbody = document.getElementById('correction-rules-tbody');
+  if (!items || items.length === 0) {
+    tbody.innerHTML = '<tr id="correction-rules-empty"><td colspan="5" style="text-align:center;padding:16px;color:var(--text3);">등록된 교정 규칙이 없습니다.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(r => `
+    <tr style="border-bottom:1px solid var(--border);" id="rule-row-${r.id}">
+      <td style="padding:7px 8px;">
+        <span id="rule-wrong-text-${r.id}">${esc(r.wrong)}</span>
+        <input id="rule-wrong-edit-${r.id}" class="input" style="display:none;width:100%;font-size:12px;" value="${esc(r.wrong)}" maxlength="200">
+      </td>
+      <td style="padding:7px 8px;color:var(--text3);">→</td>
+      <td style="padding:7px 8px;">
+        <span id="rule-correct-text-${r.id}">${esc(r.correct)}</span>
+        <input id="rule-correct-edit-${r.id}" class="input" style="display:none;width:100%;font-size:12px;" value="${esc(r.correct)}" maxlength="200">
+      </td>
+      <td style="padding:7px 8px;color:var(--text3);font-size:11px;">
+        <span id="rule-desc-text-${r.id}">${esc(r.description)}</span>
+        <input id="rule-desc-edit-${r.id}" class="input" style="display:none;width:100%;font-size:12px;" value="${esc(r.description)}" maxlength="200">
+      </td>
+      <td style="padding:7px 8px;white-space:nowrap;">
+        <span id="rule-actions-${r.id}">
+          <button onclick="startEditRule(${r.id})" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:11px;padding:2px 5px;">수정</button>
+          <button onclick="deleteRule(${r.id})" style="background:none;border:none;cursor:pointer;color:#e55;font-size:11px;padding:2px 5px;">삭제</button>
+        </span>
+        <span id="rule-edit-actions-${r.id}" style="display:none;">
+          <button onclick="saveEditRule(${r.id})" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:11px;padding:2px 5px;">저장</button>
+          <button onclick="cancelEditRule(${r.id})" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;padding:2px 5px;">취소</button>
+        </span>
+      </td>
+    </tr>`).join('');
+}
+
+function startEditRule(id) {
+  ['wrong','correct','desc'].forEach(f => {
+    document.getElementById(`rule-${f}-text-${id}`).style.display = 'none';
+    document.getElementById(`rule-${f}-edit-${id}`).style.display = 'block';
+  });
+  document.getElementById(`rule-actions-${id}`).style.display = 'none';
+  document.getElementById(`rule-edit-actions-${id}`).style.display = 'inline';
+}
+
+function cancelEditRule(id) {
+  ['wrong','correct','desc'].forEach(f => {
+    document.getElementById(`rule-${f}-text-${id}`).style.display = 'inline';
+    document.getElementById(`rule-${f}-edit-${id}`).style.display = 'none';
+  });
+  document.getElementById(`rule-actions-${id}`).style.display = 'inline';
+  document.getElementById(`rule-edit-actions-${id}`).style.display = 'none';
+}
+
+async function saveEditRule(id) {
+  const wrong = document.getElementById(`rule-wrong-edit-${id}`).value.trim();
+  const correct = document.getElementById(`rule-correct-edit-${id}`).value.trim();
+  const description = document.getElementById(`rule-desc-edit-${id}`).value.trim();
+  if (!wrong || !correct) { toast('오인식 표현과 올바른 표현을 모두 입력해주세요.', 'err'); return; }
+  try {
+    await api('PUT', `/glossary/admin/rules/${id}`, { wrong, correct, description });
+    loadCorrectionRules();
+    toast('교정 규칙이 수정되었습니다.', 'ok');
+  } catch(e) { toast('수정 실패: ' + (e.message||'오류'), 'err'); }
+}
+
+async function addCorrectionRule() {
+  const wrong = document.getElementById('correction-wrong-input').value.trim();
+  const correct = document.getElementById('correction-correct-input').value.trim();
+  const description = document.getElementById('correction-desc-input').value.trim();
+  if (!wrong || !correct) { toast('오인식 표현과 올바른 표현을 모두 입력해주세요.', 'err'); return; }
+  try {
+    await api('POST', '/glossary/admin/rules', { wrong, correct, description });
+    document.getElementById('correction-wrong-input').value = '';
+    document.getElementById('correction-correct-input').value = '';
+    document.getElementById('correction-desc-input').value = '';
+    loadCorrectionRules();
+    toast('교정 규칙이 추가되었습니다.', 'ok');
+  } catch(e) { toast('추가 실패: ' + (e.message||'오류'), 'err'); }
+}
+
+async function deleteRule(id) {
+  if (!confirm('이 교정 규칙을 삭제하겠습니까?')) return;
+  try {
+    await api('DELETE', `/glossary/admin/rules/${id}`);
+    loadCorrectionRules();
+    toast('삭제되었습니다.', 'ok');
+  } catch(e) { toast('삭제 실패', 'err'); }
 }
 
 // ── 관리자 전역 용어사전 ──────────────────────────────────────────────────────
