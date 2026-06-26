@@ -101,11 +101,6 @@ def build_docx(meeting) -> bytes:
             row[2].text = _fmt_date(item.due_date)
             row[3].text = "완료" if item.status == "done" else "진행 중"
 
-    # Transcript
-    if meeting.transcript:
-        doc.add_heading("발화 기록 (ASR)", level=2)
-        doc.add_paragraph(meeting.transcript)
-
     buf = io.BytesIO()
     doc.save(buf)
     return buf.getvalue()
@@ -182,10 +177,6 @@ def build_pdf(meeting) -> bytes:
         ]))
         story.append(ai_tbl)
 
-    if meeting.transcript:
-        story.append(Paragraph("발화 기록 (ASR)", h2))
-        story.append(Paragraph(_esc_lines(meeting.transcript), body))
-
     doc.build(story)
     return buf.getvalue()
 
@@ -213,6 +204,4 @@ def build_txt(meeting) -> bytes:
     for item in meeting.action_items:
         status_label = "완료" if item.status == "done" else "진행 중"
         lines.append(f"  • {item.content} / 담당: {item.assignee or '-'} / 기한: {_fmt_date(item.due_date)} / {status_label}")
-    if meeting.transcript:
-        lines += ["", "[발화 기록 (ASR)]", meeting.transcript]
     return "\n".join(lines).encode("utf-8")
