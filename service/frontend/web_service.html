@@ -208,6 +208,26 @@ select.input{appearance:none;cursor:pointer;}
 .pg-btn:hover{border-color:var(--accent);color:var(--accent);}
 .pg-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
 .mt12{margin-top:12px}.mb12{margin-bottom:12px}.mb16{margin-bottom:16px}.mb20{margin-bottom:20px}
+
+/* BOARD (공지사항 / Q&A) */
+.board-wrap{flex:1;overflow-y:auto;padding:0 28px 28px;}
+.board-header{padding:16px 0 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;margin-bottom:4px;}
+.board-title{font-size:18px;font-weight:700;}
+.board-table{width:100%;border-collapse:collapse;margin-top:4px;}
+.board-table th{text-align:left;padding:9px 12px;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;}
+.board-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text2);vertical-align:middle;}
+.board-table tr:last-child td{border-bottom:none;}
+.board-table tbody tr{transition:background .08s;cursor:pointer;}
+.board-table tbody tr:hover td{background:var(--bg2);}
+.board-detail-wrap{display:none;margin-top:12px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.board-detail-wrap.open{display:block;}
+.board-detail-head{padding:16px 18px;background:var(--bg2);border-bottom:1px solid var(--border);}
+.board-detail-body{padding:16px 18px;font-size:13px;line-height:1.75;white-space:pre-wrap;word-break:break-word;}
+.board-reply-box{padding:14px 18px;background:#f8f9fb;border-top:1px solid var(--border);}
+.board-reply-item{padding:10px 14px;background:var(--accent-d);border-left:3px solid var(--accent);border-radius:0 var(--rs) var(--rs) 0;margin-bottom:8px;font-size:13px;line-height:1.65;white-space:pre-wrap;word-break:break-word;}
+.pin-badge{display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700;background:#fef3c7;color:#b45309;margin-right:6px;}
+.secret-badge{display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700;background:#f1f5f9;color:#475569;}
+.answered-badge{display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700;background:var(--accent-d);color:var(--accent2);}
 </style>
 </head>
 <body>
@@ -317,6 +337,14 @@ select.input{appearance:none;cursor:pointer;}
   <button id="sb-my" class="sb-item active" onclick="setNav(this,'my')" title="회의 목록">
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="3"/><path d="M7 8h6M7 12h4"/></svg>
     <span>회의 목록</span>
+  </button>
+  <button class="sb-item" onclick="setNav(this,'notices')" title="공지사항">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12v10H4z"/><path d="M4 4l4 5 4-5"/></svg>
+    <span>공지사항</span>
+  </button>
+  <button class="sb-item" onclick="setNav(this,'qna')" title="Q&amp;A">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2z"/><path d="M10 11V9a2 2 0 10-2-2"/><circle cx="10" cy="13.5" r=".5" fill="currentColor"/></svg>
+    <span>Q&amp;A</span>
   </button>
   <div class="sb-spacer"></div>
   <div class="sb-bottom">
@@ -669,10 +697,120 @@ select.input{appearance:none;cursor:pointer;}
       </div>
     </div>
 
+    <!-- ── 공지사항 ─────────────────────────────────────────────────────────── -->
+    <div id="page-notices" class="page">
+      <div style="padding:0 28px;flex-shrink:0;" class="board-header">
+        <div class="board-title">공지사항</div>
+        <button id="notice-write-btn" class="btn btn-primary btn-sm" style="display:none;" onclick="openNoticeModal()">+ 공지 등록</button>
+      </div>
+      <div class="board-wrap">
+        <table class="board-table" id="notice-table">
+          <thead><tr>
+            <th style="width:60%">제목</th>
+            <th>작성자</th>
+            <th>등록일</th>
+            <th style="width:50px"></th>
+          </tr></thead>
+          <tbody id="notice-tbody"></tbody>
+        </table>
+        <div class="empty-state" id="notice-empty" style="display:none;">
+          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 8h24v32H12zM18 16h12M18 22h12M18 28h7"/></svg>
+          <p>등록된 공지사항이 없습니다.</p>
+        </div>
+        <div id="notice-detail-wrap" class="board-detail-wrap">
+          <div class="board-detail-head">
+            <div style="font-size:15px;font-weight:700;" id="notice-detail-title"></div>
+            <div style="font-size:11px;color:var(--text3);margin-top:4px;" id="notice-detail-meta"></div>
+          </div>
+          <div class="board-detail-body" id="notice-detail-body"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Q&A ──────────────────────────────────────────────────────────────── -->
+    <div id="page-qna" class="page">
+      <div style="padding:0 28px;flex-shrink:0;" class="board-header">
+        <div class="board-title">Q &amp; A</div>
+        <button class="btn btn-primary btn-sm" onclick="openQnaModal()">+ 질문 등록</button>
+      </div>
+      <div class="board-wrap">
+        <table class="board-table" id="qna-table">
+          <thead><tr>
+            <th style="width:55%">제목</th>
+            <th>작성자</th>
+            <th>등록일</th>
+            <th style="width:60px">답변</th>
+            <th style="width:50px"></th>
+          </tr></thead>
+          <tbody id="qna-tbody"></tbody>
+        </table>
+        <div class="empty-state" id="qna-empty" style="display:none;">
+          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="24" cy="24" r="18"/><path d="M24 28v-2a5 5 0 10-5-5"/><circle cx="24" cy="32" r="1" fill="currentColor"/></svg>
+          <p>등록된 질문이 없습니다.</p>
+        </div>
+        <div id="qna-detail-wrap" class="board-detail-wrap">
+          <div class="board-detail-head">
+            <div style="font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;">
+              <span id="qna-detail-title"></span>
+              <span id="qna-detail-secret-badge"></span>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:4px;" id="qna-detail-meta"></div>
+          </div>
+          <div class="board-detail-body" id="qna-detail-body"></div>
+          <div class="board-reply-box" id="qna-reply-section">
+            <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:8px;">관리자 답변</div>
+            <div id="qna-replies-list"></div>
+            <div id="qna-reply-form" style="display:none;margin-top:8px;">
+              <textarea class="input" id="qna-reply-input" placeholder="답변을 입력하세요..." rows="3" style="width:100%;margin-bottom:6px;"></textarea>
+              <div style="display:flex;gap:6px;justify-content:flex-end;">
+                <button class="btn btn-ghost btn-sm" onclick="document.getElementById('qna-reply-form').style.display='none'">취소</button>
+                <button class="btn btn-primary btn-sm" onclick="submitQnaReply()">답변 등록</button>
+              </div>
+            </div>
+            <button id="qna-reply-btn" class="btn btn-ghost btn-sm" style="display:none;margin-top:6px;" onclick="document.getElementById('qna-reply-form').style.display='';document.getElementById('qna-reply-btn').style.display='none'">답변 작성</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
 </div><!-- /layout-body -->
+
+<!-- ── 공지 등록 MODAL ───────────────────────────────────────────────────── -->
+<div class="modal-bg" id="notice-modal">
+  <div class="modal" style="width:520px;">
+    <div class="modal-title">공지사항 등록</div>
+    <div class="field"><div class="field-label">제목</div><input class="input" id="notice-title-input" placeholder="공지 제목을 입력하세요"></div>
+    <div class="field"><div class="field-label">내용</div><textarea class="input" id="notice-content-input" rows="6" placeholder="공지 내용을 입력하세요..."></textarea></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+      <input type="checkbox" id="notice-pinned-input" style="width:15px;height:15px;cursor:pointer;">
+      <label for="notice-pinned-input" style="font-size:13px;cursor:pointer;">상단 고정</label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeNoticeModal()">취소</button>
+      <button class="btn btn-primary" onclick="submitNotice()">등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Q&A 등록 MODAL ────────────────────────────────────────────────────── -->
+<div class="modal-bg" id="qna-modal">
+  <div class="modal" style="width:520px;">
+    <div class="modal-title">질문 등록</div>
+    <div class="field"><div class="field-label">제목</div><input class="input" id="qna-title-input" placeholder="질문 제목을 입력하세요"></div>
+    <div class="field"><div class="field-label">내용</div><textarea class="input" id="qna-content-input" rows="6" placeholder="질문 내용을 입력하세요..."></textarea></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+      <input type="checkbox" id="qna-secret-input" style="width:15px;height:15px;cursor:pointer;">
+      <label for="qna-secret-input" style="font-size:13px;cursor:pointer;">🔒 비밀글로 등록 (본인 및 관리자만 열람 가능)</label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeQnaModal()">취소</button>
+      <button class="btn btn-primary" onclick="submitQna()">등록</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── EXPORT MODAL ──────────────────────────────────────────────────────── -->
 <div class="modal-bg" id="export-modal">
@@ -842,6 +980,7 @@ function acceptConsent() {
   document.getElementById('sb-role').textContent = _me.role === 'admin' ? '관리자' : '일반 사용자';
   if (_me.role === 'admin') {
     document.getElementById('sb-admin').style.display = '';
+    document.getElementById('notice-write-btn').style.display = '';
     checkPendingUsers();
   }
   loadList();
@@ -881,7 +1020,7 @@ function doLogout() {
 }
 
 // ── Navigation ────────────────────────────────────────────────────────────────
-const pageMap = { new: 'page-new', my: 'page-my', detail: 'page-detail', processing: 'page-processing', admin: 'page-admin' };
+const pageMap = { new: 'page-new', my: 'page-my', detail: 'page-detail', processing: 'page-processing', admin: 'page-admin', notices: 'page-notices', qna: 'page-qna' };
 function setNav(el, key) {
   document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
   if (el) el.classList.add('active');
@@ -890,6 +1029,201 @@ function setNav(el, key) {
   if (key === 'my') loadList();
   if (key === 'admin') loadAdminStats();
   if (key === 'new') resetNewForm();
+  if (key === 'notices') loadNotices();
+  if (key === 'qna') loadQna();
+}
+
+// ── 공지사항 ──────────────────────────────────────────────────────────────────
+let _openNoticeId = null;
+
+async function loadNotices() {
+  try {
+    const items = await api('GET', '/board/notices');
+    if (!items) return;
+    const tbody = document.getElementById('notice-tbody');
+    const empty = document.getElementById('notice-empty');
+    const detail = document.getElementById('notice-detail-wrap');
+    detail.classList.remove('open');
+    _openNoticeId = null;
+    if (!items.length) { empty.style.display = 'flex'; tbody.innerHTML = ''; return; }
+    empty.style.display = 'none';
+    tbody.innerHTML = items.map(n => `
+      <tr onclick="openNoticeDetail(${n.id})">
+        <td>${n.is_pinned ? '<span class="pin-badge">📌 고정</span>' : ''}${esc(n.title)}</td>
+        <td>${esc(n.author_name)}</td>
+        <td>${fmtDateOnly(n.created_at)}</td>
+        <td>${_me?.role === 'admin' ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();deleteNotice(${n.id})" style="color:var(--red);">삭제</button>` : ''}</td>
+      </tr>`).join('');
+  } catch (e) { toast('공지사항 로드 실패: ' + e.message, 'err'); }
+}
+
+async function openNoticeDetail(id) {
+  if (_openNoticeId === id) {
+    document.getElementById('notice-detail-wrap').classList.remove('open');
+    _openNoticeId = null;
+    return;
+  }
+  try {
+    const items = await api('GET', '/board/notices');
+    const n = items?.find(x => x.id === id);
+    if (!n) return;
+    _openNoticeId = id;
+    document.getElementById('notice-detail-title').textContent = n.title;
+    document.getElementById('notice-detail-meta').textContent = `${n.author_name} · ${fmtDate(n.created_at)}`;
+    document.getElementById('notice-detail-body').textContent = n.content;
+    document.getElementById('notice-detail-wrap').classList.add('open');
+    document.getElementById('notice-detail-wrap').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch (e) { toast('공지 상세 로드 실패', 'err'); }
+}
+
+function openNoticeModal() {
+  document.getElementById('notice-title-input').value = '';
+  document.getElementById('notice-content-input').value = '';
+  document.getElementById('notice-pinned-input').checked = false;
+  document.getElementById('notice-modal').classList.add('open');
+}
+function closeNoticeModal() { document.getElementById('notice-modal').classList.remove('open'); }
+
+async function submitNotice() {
+  const title = document.getElementById('notice-title-input').value.trim();
+  const content = document.getElementById('notice-content-input').value.trim();
+  const is_pinned = document.getElementById('notice-pinned-input').checked;
+  if (!title || !content) { toast('제목과 내용을 입력하세요.', 'err'); return; }
+  try {
+    await api('POST', '/board/notices', { title, content, is_pinned });
+    closeNoticeModal();
+    toast('공지사항이 등록되었습니다.', 'ok');
+    loadNotices();
+  } catch (e) { toast('등록 실패: ' + e.message, 'err'); }
+}
+
+async function deleteNotice(id) {
+  if (!confirm('공지사항을 삭제하겠습니까?')) return;
+  try {
+    await api('DELETE', `/board/notices/${id}`);
+    toast('삭제되었습니다.', 'ok');
+    loadNotices();
+  } catch (e) { toast('삭제 실패: ' + e.message, 'err'); }
+}
+
+// ── Q&A ───────────────────────────────────────────────────────────────────────
+let _openQnaId = null;
+
+async function loadQna() {
+  try {
+    const items = await api('GET', '/board/qna');
+    if (!items) return;
+    const tbody = document.getElementById('qna-tbody');
+    const empty = document.getElementById('qna-empty');
+    const detail = document.getElementById('qna-detail-wrap');
+    detail.classList.remove('open');
+    _openQnaId = null;
+    if (!items.length) { empty.style.display = 'flex'; tbody.innerHTML = ''; return; }
+    empty.style.display = 'none';
+    tbody.innerHTML = items.map(p => `
+      <tr onclick="openQnaDetail(${p.id}, ${p.is_mine}, ${p.is_secret})">
+        <td>
+          ${p.is_secret ? '<span class="secret-badge">🔒 비밀</span> ' : ''}${esc(p.title)}
+        </td>
+        <td>${esc(p.author_name)}</td>
+        <td>${fmtDateOnly(p.created_at)}</td>
+        <td>${p.has_reply ? '<span class="answered-badge">답변완료</span>' : '<span style="color:var(--text3);font-size:11px;">대기중</span>'}</td>
+        <td>${(p.is_mine || _me?.role === 'admin') ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();deleteQna(${p.id})" style="color:var(--red);">삭제</button>` : ''}</td>
+      </tr>`).join('');
+  } catch (e) { toast('Q&A 로드 실패: ' + e.message, 'err'); }
+}
+
+async function openQnaDetail(id, isMine, isSecret) {
+  if (_openQnaId === id) {
+    document.getElementById('qna-detail-wrap').classList.remove('open');
+    _openQnaId = null;
+    return;
+  }
+  try {
+    const p = await api('GET', `/board/qna/${id}`);
+    if (!p) return;
+    _openQnaId = id;
+    document.getElementById('qna-detail-title').textContent = p.title;
+    const secretBadge = document.getElementById('qna-detail-secret-badge');
+    secretBadge.innerHTML = p.is_secret ? '<span class="secret-badge">🔒 비밀글</span>' : '';
+    document.getElementById('qna-detail-meta').textContent = `${p.author_name} · ${fmtDate(p.created_at)}`;
+    document.getElementById('qna-detail-body').textContent = p.content;
+
+    const repliesList = document.getElementById('qna-replies-list');
+    if (p.replies.length) {
+      repliesList.innerHTML = p.replies.map(r => `
+        <div class="board-reply-item">
+          <div style="font-size:11px;color:var(--accent2);font-weight:700;margin-bottom:4px;">${esc(r.author_name)} · ${fmtDate(r.created_at)}</div>
+          ${esc(r.content)}
+          ${_me?.role === 'admin' ? `<div style="margin-top:6px;"><button class="btn btn-ghost btn-sm" onclick="deleteQnaReply(${id},${r.id})" style="color:var(--red);font-size:11px;">삭제</button></div>` : ''}
+        </div>`).join('');
+    } else {
+      repliesList.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:4px 0;">아직 답변이 없습니다.</div>';
+    }
+
+    const replyBtn = document.getElementById('qna-reply-btn');
+    const replyForm = document.getElementById('qna-reply-form');
+    replyForm.style.display = 'none';
+    document.getElementById('qna-reply-input').value = '';
+    replyBtn.style.display = _me?.role === 'admin' ? '' : 'none';
+
+    document.getElementById('qna-detail-wrap').classList.add('open');
+    document.getElementById('qna-detail-wrap').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch (e) {
+    if (e.message?.includes('403') || e.message?.includes('비밀')) toast('비밀글입니다. 본인 또는 관리자만 열람 가능합니다.', 'err');
+    else toast('상세 조회 실패: ' + e.message, 'err');
+  }
+}
+
+function openQnaModal() {
+  document.getElementById('qna-title-input').value = '';
+  document.getElementById('qna-content-input').value = '';
+  document.getElementById('qna-secret-input').checked = false;
+  document.getElementById('qna-modal').classList.add('open');
+}
+function closeQnaModal() { document.getElementById('qna-modal').classList.remove('open'); }
+
+async function submitQna() {
+  const title = document.getElementById('qna-title-input').value.trim();
+  const content = document.getElementById('qna-content-input').value.trim();
+  const is_secret = document.getElementById('qna-secret-input').checked;
+  if (!title || !content) { toast('제목과 내용을 입력하세요.', 'err'); return; }
+  try {
+    await api('POST', '/board/qna', { title, content, is_secret });
+    closeQnaModal();
+    toast('질문이 등록되었습니다.', 'ok');
+    loadQna();
+  } catch (e) { toast('등록 실패: ' + e.message, 'err'); }
+}
+
+async function deleteQna(id) {
+  if (!confirm('질문을 삭제하겠습니까?')) return;
+  try {
+    await api('DELETE', `/board/qna/${id}`);
+    toast('삭제되었습니다.', 'ok');
+    loadQna();
+  } catch (e) { toast('삭제 실패: ' + e.message, 'err'); }
+}
+
+async function submitQnaReply() {
+  const content = document.getElementById('qna-reply-input').value.trim();
+  if (!content) { toast('답변 내용을 입력하세요.', 'err'); return; }
+  try {
+    await api('POST', `/board/qna/${_openQnaId}/reply`, { content });
+    toast('답변이 등록되었습니다.', 'ok');
+    document.getElementById('qna-reply-form').style.display = 'none';
+    document.getElementById('qna-reply-btn').style.display = '';
+    openQnaDetail(_openQnaId, true, false);
+  } catch (e) { toast('답변 등록 실패: ' + e.message, 'err'); }
+}
+
+async function deleteQnaReply(postId, replyId) {
+  if (!confirm('답변을 삭제하겠습니까?')) return;
+  try {
+    await api('DELETE', `/board/qna/${postId}/reply/${replyId}`);
+    toast('삭제되었습니다.', 'ok');
+    openQnaDetail(postId, true, false);
+  } catch (e) { toast('삭제 실패: ' + e.message, 'err'); }
 }
 
 // ── Meeting list ──────────────────────────────────────────────────────────────
