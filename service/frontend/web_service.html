@@ -4,7 +4,100 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>KAI Meetings</title>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+// Lightweight markdown parser — no external dependencies (works in closed networks)
+var marked = (function() {
+  function escape(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function inline(s) {
+    return s
+      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img alt="$1" src="$2">')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/~~(.+?)~~/g, '<del>$1</del>');
+  }
+  function parse(src) {
+    var lines = src.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+    var out = '';
+    var i = 0;
+    var inUl = false, inOl = false, inCode = false, codeBuf = '', inBlockquote = false;
+    function closeList() {
+      if (inUl) { out += '</ul>'; inUl = false; }
+      if (inOl) { out += '</ol>'; inOl = false; }
+    }
+    function closeBq() {
+      if (inBlockquote) { out += '</blockquote>'; inBlockquote = false; }
+    }
+    while (i < lines.length) {
+      var line = lines[i];
+      // fenced code block
+      if (/^```/.test(line)) {
+        if (!inCode) {
+          closeList(); closeBq();
+          inCode = true; codeBuf = '';
+          i++; continue;
+        } else {
+          out += '<pre><code>' + escape(codeBuf) + '</code></pre>';
+          inCode = false; codeBuf = '';
+          i++; continue;
+        }
+      }
+      if (inCode) { codeBuf += line + '\n'; i++; continue; }
+      // hr
+      if (/^(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
+        closeList(); closeBq();
+        out += '<hr>'; i++; continue;
+      }
+      // headings
+      var hm = line.match(/^(#{1,6})\s+(.+)/);
+      if (hm) {
+        closeList(); closeBq();
+        var lvl = hm[1].length;
+        out += '<h' + lvl + '>' + inline(hm[2]) + '</h' + lvl + '>';
+        i++; continue;
+      }
+      // blockquote
+      if (/^>\s?/.test(line)) {
+        closeList();
+        if (!inBlockquote) { out += '<blockquote>'; inBlockquote = true; }
+        out += '<p>' + inline(line.replace(/^>\s?/,'')) + '</p>';
+        i++; continue;
+      } else { closeBq(); }
+      // unordered list
+      if (/^[\*\-\+]\s+/.test(line)) {
+        if (inOl) { out += '</ol>'; inOl = false; }
+        if (!inUl) { out += '<ul>'; inUl = true; }
+        out += '<li>' + inline(line.replace(/^[\*\-\+]\s+/,'')) + '</li>';
+        i++; continue;
+      }
+      // ordered list
+      if (/^\d+\.\s+/.test(line)) {
+        if (inUl) { out += '</ul>'; inUl = false; }
+        if (!inOl) { out += '<ol>'; inOl = true; }
+        out += '<li>' + inline(line.replace(/^\d+\.\s+/,'')) + '</li>';
+        i++; continue;
+      }
+      // blank line
+      if (/^\s*$/.test(line)) {
+        closeList(); closeBq();
+        i++; continue;
+      }
+      // paragraph
+      closeList(); closeBq();
+      out += '<p>' + inline(line) + '</p>';
+      i++;
+    }
+    closeList(); closeBq();
+    if (inCode) out += '<pre><code>' + escape(codeBuf) + '</code></pre>';
+    return out;
+  }
+  return { parse: parse };
+})();
+</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
