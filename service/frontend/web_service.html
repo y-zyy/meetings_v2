@@ -229,19 +229,15 @@ select.input{appearance:none;cursor:pointer;}
 .secret-badge{display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700;background:#f1f5f9;color:#475569;}
 .answered-badge{display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700;background:var(--accent-d);color:var(--accent2);}
 
-/* GLOSSARY PANEL */
-.glossary-panel{width:220px;flex-shrink:0;background:#fff;border-right:1px solid var(--border);display:flex;flex-direction:column;height:100%;transition:width .2s ease;overflow:hidden;}
-.glossary-panel.collapsed{width:0;border-right:none;}
-.glossary-panel-inner{width:220px;display:flex;flex-direction:column;height:100%;padding:14px 12px;}
-.glossary-panel-title{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
-.glossary-tag{display:inline-flex;align-items:center;gap:5px;background:var(--accent-d);color:var(--accent2);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;margin:2px 2px 2px 0;cursor:default;}
-.glossary-tag .del-btn{cursor:pointer;color:var(--accent);font-size:12px;line-height:1;opacity:.6;}
+/* GLOSSARY PAGE */
+.glossary-tag{display:inline-flex;align-items:center;gap:5px;background:var(--accent-d);color:var(--accent2);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;margin:3px;cursor:default;}
+.glossary-tag .del-btn{cursor:pointer;color:var(--accent);font-size:13px;line-height:1;opacity:.6;}
 .glossary-tag .del-btn:hover{opacity:1;}
-.glossary-add-wrap{display:flex;gap:5px;margin-top:8px;}
-.glossary-add-wrap input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);padding:5px 8px;font-size:12px;outline:none;font-family:var(--font);}
+.glossary-add-wrap{display:flex;gap:8px;}
+.glossary-add-wrap input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);padding:8px 12px;font-size:13px;outline:none;font-family:var(--font);}
 .glossary-add-wrap input:focus{border-color:var(--accent);}
-.glossary-count{font-size:10px;color:var(--text3);margin-bottom:6px;}
-.glossary-tags-wrap{flex:1;overflow-y:auto;}
+.glossary-count{font-size:12px;color:var(--text2);}
+.glossary-tags-wrap{display:flex;flex-wrap:wrap;align-content:flex-start;}
 </style>
 </head>
 <body>
@@ -360,7 +356,7 @@ select.input{appearance:none;cursor:pointer;}
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2z"/><path d="M10 11V9a2 2 0 10-2-2"/><circle cx="10" cy="13.5" r=".5" fill="currentColor"/></svg>
     <span>Q&amp;A</span>
   </button>
-  <button class="sb-item" id="sb-glossary" onclick="toggleGlossaryPanel(this)" title="나의 용어사전">
+  <button class="sb-item" id="sb-glossary" onclick="setNav(this,'glossary')" title="나의 용어사전">
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="2" width="14" height="16" rx="2"/><path d="M7 6h6M7 10h6M7 14h3"/><circle cx="15" cy="14" r="3" fill="currentColor" stroke="none" style="fill:rgba(255,255,255,.35)"/><text x="15" y="17" text-anchor="middle" font-size="5" fill="white" stroke="none">+</text></svg>
     <span>용어사전</span>
   </button>
@@ -377,21 +373,6 @@ select.input{appearance:none;cursor:pointer;}
   </div>
 </aside>
 
-<!-- ── 사용자 용어사전 패널 ──────────────────────────────────────────────── -->
-<div class="glossary-panel collapsed" id="glossary-panel">
-  <div class="glossary-panel-inner">
-    <div class="glossary-panel-title">
-      <span>나의 용어사전</span>
-    </div>
-    <div class="glossary-count" id="user-glossary-count">0개 등록됨</div>
-    <div class="glossary-tags-wrap" id="user-glossary-tags"></div>
-    <div class="glossary-add-wrap">
-      <input id="user-glossary-input" placeholder="용어 추가..." maxlength="100" onkeydown="if(event.key==='Enter')addUserTerm()">
-      <button class="btn btn-primary btn-sm" onclick="addUserTerm()" style="padding:5px 10px;">+</button>
-    </div>
-    <div style="font-size:10px;color:var(--text3);margin-top:6px;line-height:1.5;">STT 후처리 시 자동 반영됩니다</div>
-  </div>
-</div>
 
 <div class="main">
   <div class="content">
@@ -880,6 +861,34 @@ select.input{appearance:none;cursor:pointer;}
       </div>
     </div>
 
+    <!-- ── 나의 용어사전 ──────────────────────────────────────────────────────── -->
+    <div id="page-glossary" class="page">
+      <div style="padding:0 28px;flex-shrink:0;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;height:56px;">
+        <div style="font-size:18px;font-weight:700;">나의 용어사전</div>
+        <span class="glossary-count" id="user-glossary-count">0개 등록됨</span>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:28px 32px;display:flex;flex-direction:column;gap:20px;">
+        <div class="card" style="display:flex;flex-direction:column;gap:14px;">
+          <div>
+            <div class="section-label" style="margin-bottom:8px;">용어 추가</div>
+            <div class="glossary-add-wrap">
+              <input id="user-glossary-input" class="input" placeholder="용어를 입력하세요..." maxlength="100" onkeydown="if(event.key==='Enter')addUserTerm()">
+              <button class="btn btn-primary" onclick="addUserTerm()" style="white-space:nowrap;">+ 추가</button>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:6px;">STT 후처리 시 자동으로 반영됩니다.</div>
+          </div>
+        </div>
+        <div class="card" style="flex:1;display:flex;flex-direction:column;gap:10px;">
+          <div class="section-label" style="margin-bottom:0;">등록된 용어</div>
+          <div class="glossary-tags-wrap" id="user-glossary-tags" style="min-height:80px;"></div>
+          <div class="empty-state" id="glossary-empty" style="display:none;flex:1;">
+            <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="8" y="6" width="32" height="36" rx="4"/><path d="M16 18h16M16 26h16M16 34h8"/></svg>
+            <p>등록된 용어가 없습니다. 용어를 추가해보세요.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -1127,7 +1136,7 @@ function doLogout() {
 }
 
 // ── Navigation ────────────────────────────────────────────────────────────────
-const pageMap = { new: 'page-new', my: 'page-my', detail: 'page-detail', processing: 'page-processing', admin: 'page-admin', notices: 'page-notices', qna: 'page-qna' };
+const pageMap = { new: 'page-new', my: 'page-my', detail: 'page-detail', processing: 'page-processing', admin: 'page-admin', notices: 'page-notices', qna: 'page-qna', glossary: 'page-glossary' };
 function setNav(el, key) {
   document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
   if (el) el.classList.add('active');
@@ -1138,6 +1147,7 @@ function setNav(el, key) {
   if (key === 'new') resetNewForm();
   if (key === 'notices') loadNotices();
   if (key === 'qna') loadQna();
+  if (key === 'glossary') loadUserGlossary();
 }
 
 // ── 공지사항 ──────────────────────────────────────────────────────────────────
@@ -2032,15 +2042,6 @@ async function bulkDelete() {
 }
 
 // ── 사용자 용어사전 ───────────────────────────────────────────────────────────
-let _glossaryOpen = false;
-
-function toggleGlossaryPanel(el) {
-  _glossaryOpen = !_glossaryOpen;
-  const panel = document.getElementById('glossary-panel');
-  panel.classList.toggle('collapsed', !_glossaryOpen);
-  el?.classList.toggle('active', _glossaryOpen);
-  if (_glossaryOpen) loadUserGlossary();
-}
 
 async function loadUserGlossary() {
   try {
@@ -2053,11 +2054,18 @@ async function loadUserGlossary() {
 function renderUserGlossary(items, total) {
   document.getElementById('user-glossary-count').textContent = `${total}개 등록됨`;
   const wrap = document.getElementById('user-glossary-tags');
-  wrap.innerHTML = items.map(t => `
-    <span class="glossary-tag">
-      ${esc(t.term)}${t.description ? ` <span style="color:var(--text3);font-size:10px;">(${esc(t.description)})</span>` : ''}
-      <span class="del-btn" onclick="deleteUserTerm(${t.id})" title="삭제">✕</span>
-    </span>`).join('');
+  const empty = document.getElementById('glossary-empty');
+  if (items.length === 0) {
+    wrap.innerHTML = '';
+    if (empty) empty.style.display = 'flex';
+  } else {
+    if (empty) empty.style.display = 'none';
+    wrap.innerHTML = items.map(t => `
+      <span class="glossary-tag">
+        ${esc(t.term)}${t.description ? ` <span style="color:var(--text3);font-size:10px;">(${esc(t.description)})</span>` : ''}
+        <span class="del-btn" onclick="deleteUserTerm(${t.id})" title="삭제">✕</span>
+      </span>`).join('');
+  }
 }
 
 async function addUserTerm() {
