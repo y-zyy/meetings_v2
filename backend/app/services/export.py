@@ -275,11 +275,6 @@ def build_docx(meeting) -> bytes:
     doc.add_heading("주요 내용 요약", level=2)
     _docx_add_markdown(doc, meeting.summary)
 
-    # Decisions
-    doc.add_heading("결정 사항", level=2)
-    for d in meeting.decisions:
-        doc.add_paragraph(d.content, style="List Bullet")
-
     # Action items
     doc.add_heading("액션 아이템", level=2)
     if meeting.action_items:
@@ -426,11 +421,6 @@ def build_pdf(meeting) -> bytes:
         story.append(Paragraph("주요 내용 요약", h2))
         _pdf_add_markdown(story, meeting.summary, body, h2, _KO_FONT, _KO_FONT_BOLD)
 
-    if meeting.decisions:
-        story.append(Paragraph("결정 사항", h2))
-        for d in meeting.decisions:
-            story.append(Paragraph(f"• {_esc(d.content)}", body))
-
     if meeting.action_items:
         story.append(Paragraph("액션 아이템", h2))
         ai_data = [["내용", "담당자", "기한", "상태"]]
@@ -474,10 +464,7 @@ def build_txt(meeting) -> bytes:
         "[주요 내용 요약]",
         meeting.summary or "",
         "",
-        "[결정 사항]",
     ]
-    for d in meeting.decisions:
-        lines.append(f"  • {d.content}")
     lines += ["", "[액션 아이템]"]
     for item in meeting.action_items:
         status_label = "완료" if item.status == "done" else "진행 중"

@@ -750,14 +750,7 @@ select.input{appearance:none;cursor:pointer;}
             <div class="section-label">주요 내용 요약</div>
             <div id="d-summary" class="markdown-body" style="font-size:13px;line-height:1.8;padding:10px 12px;border:1px solid var(--border);border-radius:var(--rs);background:var(--bg);min-height:80px;overflow-x:auto;"></div>
           </div>
-          <div class="card-sm mb12" id="sec-decisions">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-              <div class="section-label" style="margin:0">결정 사항</div>
-              <button class="btn btn-ghost btn-sm" onclick="addDecision()">+ 추가</button>
-            </div>
-            <div id="decisions-list"></div>
-          </div>
-          <div class="card-sm mb12" id="sec-actions">
+<div class="card-sm mb12" id="sec-actions">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
               <div class="section-label" style="margin:0">액션 아이템</div>
             </div>
@@ -772,8 +765,7 @@ select.input{appearance:none;cursor:pointer;}
           <div class="section-label">목차</div>
           <div class="toc-item active" onclick="activeToc(this);document.getElementById('sec-info').scrollIntoView({behavior:'smooth'})">📋 회의 정보</div>
           <div class="toc-item" onclick="activeToc(this);document.getElementById('sec-summary').scrollIntoView({behavior:'smooth'})">📝 요약</div>
-          <div class="toc-item" onclick="activeToc(this);document.getElementById('sec-decisions').scrollIntoView({behavior:'smooth'})">✅ 결정 사항</div>
-          <div class="toc-item" onclick="activeToc(this);document.getElementById('sec-actions').scrollIntoView({behavior:'smooth'})">⚡ 액션 아이템</div>
+<div class="toc-item" onclick="activeToc(this);document.getElementById('sec-actions').scrollIntoView({behavior:'smooth'})">⚡ 액션 아이템</div>
           <div class="toc-item" onclick="activeToc(this);document.getElementById('sec-transcript').scrollIntoView({behavior:'smooth'})">🎙 발화 기록</div>
         </div>
       </div>
@@ -1621,15 +1613,6 @@ function renderDetail(m) {
   document.getElementById('export-meeting-title').textContent = m.title;
   document.getElementById('export-filename').value = m.title;
 
-  const dl = document.getElementById('decisions-list');
-  dl.innerHTML = '';
-  (m.decisions || []).forEach(d => {
-    const el = document.createElement('div');
-    el.className = 'decision-item';
-    el.textContent = d.content;
-    dl.appendChild(el);
-  });
-
   const al = document.getElementById('actions-list');
   al.innerHTML = '';
   (m.action_items || []).forEach(item => {
@@ -1670,15 +1653,6 @@ async function saveDetail() {
     });
     toast('저장되었습니다.', 'ok');
   } catch (e) { toast('저장 실패: ' + e.message, 'err'); }
-}
-
-function addDecision() {
-  const t = prompt('결정 사항:');
-  if (!t) return;
-  const el = document.createElement('div');
-  el.className = 'decision-item';
-  el.textContent = t;
-  document.getElementById('decisions-list').appendChild(el);
 }
 
 // ── New meeting form ──────────────────────────────────────────────────────────
