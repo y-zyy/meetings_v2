@@ -81,6 +81,48 @@ var marked = (function() {
         out += '<li>' + inline(line.replace(/^\d+\.\s+/,'')) + '</li>';
         i++; continue;
       }
+      // table (pipe-delimited)
+      if (/^\|/.test(line)) {
+        // collect all consecutive pipe lines
+        var tableLines = [];
+        while (i < lines.length && /^\|/.test(lines[i])) {
+          tableLines.push(lines[i]);
+          i++;
+        }
+        // need at least header + separator
+        if (tableLines.length >= 2 && /^\|[\s\-:|]+\|/.test(tableLines[1])) {
+          closeList(); closeBq();
+          var parseRow = function(row) {
+            return row.replace(/^\||\|$/g,'').split('|').map(function(c){ return c.trim(); });
+          };
+          var headers = parseRow(tableLines[0]);
+          // aligns from separator row
+          var aligns = parseRow(tableLines[1]).map(function(c){
+            if (/^:-+:$/.test(c)) return 'center';
+            if (/^-+:$/.test(c)) return 'right';
+            return 'left';
+          });
+          out += '<table class="md-table"><thead><tr>';
+          headers.forEach(function(h, idx) {
+            out += '<th style="text-align:' + (aligns[idx]||'left') + '">' + inline(h) + '</th>';
+          });
+          out += '</tr></thead><tbody>';
+          for (var r = 2; r < tableLines.length; r++) {
+            var cells = parseRow(tableLines[r]);
+            out += '<tr>';
+            cells.forEach(function(c, idx) {
+              out += '<td style="text-align:' + (aligns[idx]||'left') + '">' + inline(c) + '</td>';
+            });
+            out += '</tr>';
+          }
+          out += '</tbody></table>';
+        } else {
+          // not a valid table, render as paragraphs
+          closeList(); closeBq();
+          tableLines.forEach(function(tl){ out += '<p>' + inline(tl) + '</p>'; });
+        }
+        continue;
+      }
       // blank line
       if (/^\s*$/.test(line)) {
         closeList(); closeBq();
@@ -265,6 +307,10 @@ select.input{appearance:none;cursor:pointer;}
 .markdown-body pre code{background:none;padding:0;}
 .markdown-body blockquote{border-left:3px solid var(--border2);padding-left:10px;color:var(--text2);margin:6px 0;}
 .markdown-body hr{border:none;border-top:1px solid var(--border);margin:10px 0;}
+.markdown-body .md-table{width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;}
+.markdown-body .md-table th{background:var(--bg2);padding:7px 12px;font-weight:600;color:var(--text2);border:1px solid var(--border);white-space:nowrap;}
+.markdown-body .md-table td{padding:6px 12px;border:1px solid var(--border);color:var(--text);}
+.markdown-body .md-table tbody tr:hover td{background:var(--bg2);}
 .action-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
 .action-row:last-child{border-bottom:none;}
 .checkbox{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border2);flex-shrink:0;margin-top:1px;cursor:pointer;transition:all .12s;display:flex;align-items:center;justify-content:center;font-size:9px;}
