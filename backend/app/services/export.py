@@ -261,7 +261,6 @@ def build_docx(meeting) -> bytes:
         ["일시", _fmt_date(meeting.meeting_date)],
         ["장소", meeting.location or "-"],
         ["참석자", meeting.attendees or "-"],
-        ["소요 시간", _fmt_duration(meeting.duration_seconds)],
     ]
     tbl = doc.add_table(rows=len(meta), cols=2)
     tbl.style = "Table Grid"
@@ -401,7 +400,6 @@ def build_pdf(meeting) -> bytes:
         ["일시", _fmt_date(meeting.meeting_date)],
         ["장소", meeting.location or "-"],
         ["참석자", meeting.attendees or "-"],
-        ["소요 시간", _fmt_duration(meeting.duration_seconds)],
     ]
     meta_tbl = Table(meta_data, colWidths=[3*cm, 14*cm])
     meta_tbl.setStyle(TableStyle([
@@ -459,7 +457,6 @@ def build_txt(meeting) -> bytes:
         f"일시    : {_fmt_date(meeting.meeting_date)}",
         f"장소    : {meeting.location or '-'}",
         f"참석자  : {meeting.attendees or '-'}",
-        f"소요시간: {_fmt_duration(meeting.duration_seconds)}",
         "",
         "[주요 내용 요약]",
         meeting.summary or "",
