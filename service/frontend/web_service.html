@@ -167,11 +167,14 @@ input,select,textarea{font-family:var(--font);}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
 
 /* LOGIN OVERLAY */
-#login-overlay{position:fixed;inset:0;z-index:1000;background:rgba(27,20,100,.97);display:flex;align-items:center;justify-content:center;}
+#login-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:stretch;}
 #login-overlay.hidden{display:none;}
-.login-box{background:#fff;border-radius:16px;padding:36px 40px;width:380px;box-shadow:0 20px 60px rgba(0,0,0,.3);}
-.login-logo{font-size:22px;font-weight:800;letter-spacing:2px;font-family:'Arial Black','Arial',sans-serif;text-transform:uppercase;margin-bottom:4px;}
-.login-sub{font-size:10px;font-weight:600;letter-spacing:2.5px;color:#1B1464;margin-bottom:28px;font-family:Arial,sans-serif;text-transform:uppercase;}
+.login-panel{flex:4;background:#fff;display:flex;align-items:center;justify-content:center;padding:48px 40px;overflow-y:auto;}
+.login-image-panel{flex:6;background:#1B1464 center/cover no-repeat;position:relative;}
+.login-image-panel-overlay{position:absolute;inset:0;background:rgba(15,12,60,.35);}
+.login-box{width:100%;max-width:420px;}
+.login-logo{font-size:26px;font-weight:800;letter-spacing:2px;font-family:'Arial Black','Arial',sans-serif;text-transform:uppercase;margin-bottom:4px;}
+.login-sub{font-size:10px;font-weight:600;letter-spacing:2.5px;color:#1B1464;margin-bottom:32px;font-family:Arial,sans-serif;text-transform:uppercase;}
 .login-err{font-size:12px;color:var(--red);margin-bottom:10px;min-height:18px;}
 .login-ok{font-size:12px;color:#16a34a;margin-bottom:10px;min-height:18px;}
 .login-tab{display:flex;gap:0;margin-bottom:24px;border-bottom:2px solid #e5e7eb;}
@@ -414,7 +417,9 @@ select.input{appearance:none;cursor:pointer;}
 
 <!-- ── LOGIN OVERLAY ────────────────────────────────────────────────────── -->
 <div id="login-overlay">
-  <div class="login-box" style="width:420px;">
+  <!-- 왼쪽 40%: 로그인 폼 -->
+  <div class="login-panel">
+  <div class="login-box">
     <div class="login-logo"><span style="color:#1B1464;">KA</span><span style="color:#8a8a8a;">I</span><span style="color:#1B1464;"> MEET</span><span style="color:#8a8a8a;">I</span><span style="color:#1B1464;">NGS</span></div>
     <div class="login-sub">Korea Aerospace Industries, Ltd.</div>
 
@@ -472,6 +477,12 @@ select.input{appearance:none;cursor:pointer;}
       <div class="login-ok" id="register-ok" style="display:none;"></div>
       <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doRegister()">회원가입</button>
     </div>
+  </div>
+  </div><!-- /login-panel -->
+
+  <!-- 오른쪽 60%: 배경 이미지 -->
+  <div class="login-image-panel" id="login-image-panel">
+    <div class="login-image-panel-overlay"></div>
   </div>
 </div>
 
@@ -786,8 +797,24 @@ select.input{appearance:none;cursor:pointer;}
           <tbody id="admin-user-tbody"></tbody>
         </table>
 
+        <!-- ── 로그인 화면 배경 이미지 ──────────────────────────────── -->
+        <div style="font-size:14px;font-weight:700;margin-top:28px;margin-bottom:4px">로그인 화면 배경 이미지</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:14px">로그인 창 오른쪽(60% 영역)에 표시될 배경 이미지를 설정합니다. 설정은 브라우저에 저장됩니다.</div>
+        <div style="border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:20px;display:flex;align-items:flex-end;gap:12px;">
+          <div style="flex:1;">
+            <div style="font-size:11px;color:var(--text2);margin-bottom:3px">이미지 URL 또는 파일 선택</div>
+            <input class="input" id="login-bg-url" placeholder="https://example.com/photo.jpg" style="width:100%">
+          </div>
+          <div>
+            <input type="file" id="login-bg-file" accept="image/*" style="display:none" onchange="applyLoginBgFile(this)">
+            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('login-bg-file').click()">파일 선택</button>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="applyLoginBgUrl()">적용</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="setLoginBgImage('');document.getElementById('login-bg-url').value=''">초기화</button>
+        </div>
+
         <!-- ── 시스템 설정 ─────────────────────────────────────────── -->
-        <div style="font-size:14px;font-weight:700;margin-top:28px;margin-bottom:4px">시스템 설정</div>
+        <div style="font-size:14px;font-weight:700;margin-top:8px;margin-bottom:4px">시스템 설정</div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:14px">ASR / LLM 엔드포인트 설정 (DB에 저장되어 env 기본값을 덮어씁니다)</div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" id="sys-settings-grid">
@@ -1083,6 +1110,35 @@ select.input{appearance:none;cursor:pointer;}
 <div id="toast-area"></div>
 
 <script>
+// ── Login background image ────────────────────────────────────────────────────
+const LOGIN_IMAGE_KEY = 'kai_login_bg';
+function setLoginBgImage(url) {
+  const panel = document.getElementById('login-image-panel');
+  if (!panel) return;
+  panel.style.backgroundImage = url ? `url("${url.replace(/"/g,'%22')}")` : '';
+  if (url) localStorage.setItem(LOGIN_IMAGE_KEY, url);
+  else localStorage.removeItem(LOGIN_IMAGE_KEY);
+}
+function applyLoginBgUrl() {
+  const url = document.getElementById('login-bg-url').value.trim();
+  if (!url) return;
+  setLoginBgImage(url);
+}
+function applyLoginBgFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('login-bg-url').value = '(로컬 파일)';
+    setLoginBgImage(e.target.result);
+  };
+  reader.readAsDataURL(file);
+}
+(function initLoginBg() {
+  const saved = localStorage.getItem(LOGIN_IMAGE_KEY);
+  if (saved) setLoginBgImage(saved);
+})();
+
 // ── State ────────────────────────────────────────────────────────────────────
 let _token = null; // Access token lives in memory only (never localStorage)
 let _me = null;
