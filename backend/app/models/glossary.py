@@ -19,20 +19,6 @@ class AdminGlossaryTerm(Base):
     author: Mapped["User"] = relationship("User")  # noqa: F821
 
 
-class AdminCorrectionRule(Base):
-    """음성인식 교정 규칙 (관리자 관리, Rule-based 후처리에 적용)"""
-    __tablename__ = "admin_correction_rules"
-
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    wrong: Mapped[str] = mapped_column(String(255), nullable=False)
-    correct: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
-
-    author: Mapped["User"] = relationship("User")  # noqa: F821
-
-
 class UserGlossaryTerm(Base):
     """사용자 개인 용어사전 (사용자가 직접 관리, 본인 STT 후처리에 적용)"""
     __tablename__ = "user_glossary_terms"

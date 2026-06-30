@@ -26,9 +26,6 @@ anthropic>=0.40.0
 python-docx==1.1.2
 reportlab==4.2.2
 
-# Rule-based post-processing
-pyahocorasick==2.2.0
-
 # Validation
 pydantic==2.9.2
 pydantic-settings==2.5.2

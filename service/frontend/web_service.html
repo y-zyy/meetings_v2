@@ -4,142 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>KAI Meetings</title>
-<script>
-// Lightweight markdown parser — no external dependencies (works in closed networks)
-var marked = (function() {
-  function escape(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-  function inline(s) {
-    return s
-      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img alt="$1" src="$2">')
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-      .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/~~(.+?)~~/g, '<del>$1</del>');
-  }
-  function parse(src) {
-    var lines = src.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
-    var out = '';
-    var i = 0;
-    var inUl = false, inOl = false, inCode = false, codeBuf = '', inBlockquote = false;
-    function closeList() {
-      if (inUl) { out += '</ul>'; inUl = false; }
-      if (inOl) { out += '</ol>'; inOl = false; }
-    }
-    function closeBq() {
-      if (inBlockquote) { out += '</blockquote>'; inBlockquote = false; }
-    }
-    while (i < lines.length) {
-      var line = lines[i];
-      // fenced code block
-      if (/^```/.test(line)) {
-        if (!inCode) {
-          closeList(); closeBq();
-          inCode = true; codeBuf = '';
-          i++; continue;
-        } else {
-          out += '<pre><code>' + escape(codeBuf) + '</code></pre>';
-          inCode = false; codeBuf = '';
-          i++; continue;
-        }
-      }
-      if (inCode) { codeBuf += line + '\n'; i++; continue; }
-      // hr
-      if (/^(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
-        closeList(); closeBq();
-        out += '<hr>'; i++; continue;
-      }
-      // headings
-      var hm = line.match(/^(#{1,6})\s+(.+)/);
-      if (hm) {
-        closeList(); closeBq();
-        var lvl = hm[1].length;
-        out += '<h' + lvl + '>' + inline(hm[2]) + '</h' + lvl + '>';
-        i++; continue;
-      }
-      // blockquote
-      if (/^>\s?/.test(line)) {
-        closeList();
-        if (!inBlockquote) { out += '<blockquote>'; inBlockquote = true; }
-        out += '<p>' + inline(line.replace(/^>\s?/,'')) + '</p>';
-        i++; continue;
-      } else { closeBq(); }
-      // unordered list
-      if (/^[\*\-\+]\s+/.test(line)) {
-        if (inOl) { out += '</ol>'; inOl = false; }
-        if (!inUl) { out += '<ul>'; inUl = true; }
-        out += '<li>' + inline(line.replace(/^[\*\-\+]\s+/,'')) + '</li>';
-        i++; continue;
-      }
-      // ordered list
-      if (/^\d+\.\s+/.test(line)) {
-        if (inUl) { out += '</ul>'; inUl = false; }
-        if (!inOl) { out += '<ol>'; inOl = true; }
-        out += '<li>' + inline(line.replace(/^\d+\.\s+/,'')) + '</li>';
-        i++; continue;
-      }
-      // table (pipe-delimited)
-      if (/^\|/.test(line)) {
-        // collect all consecutive pipe lines
-        var tableLines = [];
-        while (i < lines.length && /^\|/.test(lines[i])) {
-          tableLines.push(lines[i]);
-          i++;
-        }
-        // need at least header + separator
-        if (tableLines.length >= 2 && /^\|[\s\-:|]+\|/.test(tableLines[1])) {
-          closeList(); closeBq();
-          var parseRow = function(row) {
-            return row.replace(/^\||\|$/g,'').split('|').map(function(c){ return c.trim(); });
-          };
-          var headers = parseRow(tableLines[0]);
-          // aligns from separator row
-          var aligns = parseRow(tableLines[1]).map(function(c){
-            if (/^:-+:$/.test(c)) return 'center';
-            if (/^-+:$/.test(c)) return 'right';
-            return 'left';
-          });
-          out += '<table class="md-table"><thead><tr>';
-          headers.forEach(function(h, idx) {
-            out += '<th style="text-align:' + (aligns[idx]||'left') + '">' + inline(h) + '</th>';
-          });
-          out += '</tr></thead><tbody>';
-          for (var r = 2; r < tableLines.length; r++) {
-            var cells = parseRow(tableLines[r]);
-            out += '<tr>';
-            cells.forEach(function(c, idx) {
-              out += '<td style="text-align:' + (aligns[idx]||'left') + '">' + inline(c) + '</td>';
-            });
-            out += '</tr>';
-          }
-          out += '</tbody></table>';
-        } else {
-          // not a valid table, render as paragraphs
-          closeList(); closeBq();
-          tableLines.forEach(function(tl){ out += '<p>' + inline(tl) + '</p>'; });
-        }
-        continue;
-      }
-      // blank line
-      if (/^\s*$/.test(line)) {
-        closeList(); closeBq();
-        i++; continue;
-      }
-      // paragraph
-      closeList(); closeBq();
-      out += '<p>' + inline(line) + '</p>';
-      i++;
-    }
-    closeList(); closeBq();
-    if (inCode) out += '<pre><code>' + escape(codeBuf) + '</code></pre>';
-    return out;
-  }
-  return { parse: parse };
-})();
-</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -296,21 +160,6 @@ select.input{appearance:none;cursor:pointer;}
 .toc-item:hover{background:var(--bg3);color:var(--text);}
 .toc-item.active{background:var(--accent-d);color:var(--accent2);font-weight:600;}
 .decision-item{display:flex;align-items:flex-start;gap:8px;padding:9px 12px;background:var(--bg2);border-radius:var(--rs);margin-bottom:6px;font-size:13px;border-left:3px solid var(--accent);}
-.markdown-body h1,.markdown-body h2,.markdown-body h3{font-weight:700;margin:12px 0 6px;color:var(--text);}
-.markdown-body h1{font-size:17px;}.markdown-body h2{font-size:15px;}.markdown-body h3{font-size:13px;}
-.markdown-body p{margin:4px 0 8px;}
-.markdown-body ul,.markdown-body ol{padding-left:20px;margin:4px 0 8px;}
-.markdown-body li{margin-bottom:4px;}
-.markdown-body strong{font-weight:700;}
-.markdown-body code{background:var(--bg3);padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:12px;}
-.markdown-body pre{background:var(--bg3);padding:10px;border-radius:6px;overflow-x:auto;margin:8px 0;}
-.markdown-body pre code{background:none;padding:0;}
-.markdown-body blockquote{border-left:3px solid var(--border2);padding-left:10px;color:var(--text2);margin:6px 0;}
-.markdown-body hr{border:none;border-top:1px solid var(--border);margin:10px 0;}
-.markdown-body .md-table{width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;}
-.markdown-body .md-table th{background:var(--bg2);padding:7px 12px;font-weight:600;color:var(--text2);border:1px solid var(--border);white-space:nowrap;}
-.markdown-body .md-table td{padding:6px 12px;border:1px solid var(--border);color:var(--text);}
-.markdown-body .md-table tbody tr:hover td{background:var(--bg2);}
 .action-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
 .action-row:last-child{border-bottom:none;}
 .checkbox{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border2);flex-shrink:0;margin-top:1px;cursor:pointer;transition:all .12s;display:flex;align-items:center;justify-content:center;font-size:9px;}
@@ -380,15 +229,19 @@ select.input{appearance:none;cursor:pointer;}
 .secret-badge{display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700;background:#f1f5f9;color:#475569;}
 .answered-badge{display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700;background:var(--accent-d);color:var(--accent2);}
 
-/* GLOSSARY PAGE */
-.glossary-tag{display:inline-flex;align-items:center;gap:5px;background:var(--accent-d);color:var(--accent2);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;margin:3px;cursor:default;}
-.glossary-tag .del-btn{cursor:pointer;color:var(--accent);font-size:13px;line-height:1;opacity:.6;}
+/* GLOSSARY PANEL */
+.glossary-panel{width:220px;flex-shrink:0;background:#fff;border-right:1px solid var(--border);display:flex;flex-direction:column;height:100%;transition:width .2s ease;overflow:hidden;}
+.glossary-panel.collapsed{width:0;border-right:none;}
+.glossary-panel-inner{width:220px;display:flex;flex-direction:column;height:100%;padding:14px 12px;}
+.glossary-panel-title{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
+.glossary-tag{display:inline-flex;align-items:center;gap:5px;background:var(--accent-d);color:var(--accent2);border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;margin:2px 2px 2px 0;cursor:default;}
+.glossary-tag .del-btn{cursor:pointer;color:var(--accent);font-size:12px;line-height:1;opacity:.6;}
 .glossary-tag .del-btn:hover{opacity:1;}
-.glossary-add-wrap{display:flex;gap:8px;}
-.glossary-add-wrap input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);padding:8px 12px;font-size:13px;outline:none;font-family:var(--font);}
+.glossary-add-wrap{display:flex;gap:5px;margin-top:8px;}
+.glossary-add-wrap input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);padding:5px 8px;font-size:12px;outline:none;font-family:var(--font);}
 .glossary-add-wrap input:focus{border-color:var(--accent);}
-.glossary-count{font-size:12px;color:var(--text2);}
-.glossary-tags-wrap{display:flex;flex-wrap:wrap;align-content:flex-start;}
+.glossary-count{font-size:10px;color:var(--text3);margin-bottom:6px;}
+.glossary-tags-wrap{flex:1;overflow-y:auto;}
 </style>
 </head>
 <body>
@@ -507,7 +360,7 @@ select.input{appearance:none;cursor:pointer;}
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2z"/><path d="M10 11V9a2 2 0 10-2-2"/><circle cx="10" cy="13.5" r=".5" fill="currentColor"/></svg>
     <span>Q&amp;A</span>
   </button>
-  <button class="sb-item" id="sb-glossary" onclick="setNav(this,'glossary')" title="나의 용어사전">
+  <button class="sb-item" id="sb-glossary" onclick="toggleGlossaryPanel(this)" title="나의 용어사전">
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="2" width="14" height="16" rx="2"/><path d="M7 6h6M7 10h6M7 14h3"/><circle cx="15" cy="14" r="3" fill="currentColor" stroke="none" style="fill:rgba(255,255,255,.35)"/><text x="15" y="17" text-anchor="middle" font-size="5" fill="white" stroke="none">+</text></svg>
     <span>용어사전</span>
   </button>
@@ -524,6 +377,21 @@ select.input{appearance:none;cursor:pointer;}
   </div>
 </aside>
 
+<!-- ── 사용자 용어사전 패널 ──────────────────────────────────────────────── -->
+<div class="glossary-panel collapsed" id="glossary-panel">
+  <div class="glossary-panel-inner">
+    <div class="glossary-panel-title">
+      <span>나의 용어사전</span>
+    </div>
+    <div class="glossary-count" id="user-glossary-count">0개 등록됨</div>
+    <div class="glossary-tags-wrap" id="user-glossary-tags"></div>
+    <div class="glossary-add-wrap">
+      <input id="user-glossary-input" placeholder="용어 추가..." maxlength="100" onkeydown="if(event.key==='Enter')addUserTerm()">
+      <button class="btn btn-primary btn-sm" onclick="addUserTerm()" style="padding:5px 10px;">+</button>
+    </div>
+    <div style="font-size:10px;color:var(--text3);margin-top:6px;line-height:1.5;">STT 후처리 시 자동 반영됩니다</div>
+  </div>
+</div>
 
 <div class="main">
   <div class="content">
@@ -748,9 +616,16 @@ select.input{appearance:none;cursor:pointer;}
           </div>
           <div class="card-sm mb12" id="sec-summary">
             <div class="section-label">주요 내용 요약</div>
-            <div id="d-summary" class="markdown-body" style="font-size:13px;line-height:1.8;padding:10px 12px;border:1px solid var(--border);border-radius:var(--rs);background:var(--bg);min-height:80px;overflow-x:auto;"></div>
+            <textarea class="input" rows="3" id="d-summary"></textarea>
           </div>
-<div class="card-sm mb12" id="sec-actions">
+          <div class="card-sm mb12" id="sec-decisions">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <div class="section-label" style="margin:0">결정 사항</div>
+              <button class="btn btn-ghost btn-sm" onclick="addDecision()">+ 추가</button>
+            </div>
+            <div id="decisions-list"></div>
+          </div>
+          <div class="card-sm mb12" id="sec-actions">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
               <div class="section-label" style="margin:0">액션 아이템</div>
             </div>
@@ -765,7 +640,8 @@ select.input{appearance:none;cursor:pointer;}
           <div class="section-label">목차</div>
           <div class="toc-item active" onclick="activeToc(this);document.getElementById('sec-info').scrollIntoView({behavior:'smooth'})">📋 회의 정보</div>
           <div class="toc-item" onclick="activeToc(this);document.getElementById('sec-summary').scrollIntoView({behavior:'smooth'})">📝 요약</div>
-<div class="toc-item" onclick="activeToc(this);document.getElementById('sec-actions').scrollIntoView({behavior:'smooth'})">⚡ 액션 아이템</div>
+          <div class="toc-item" onclick="activeToc(this);document.getElementById('sec-decisions').scrollIntoView({behavior:'smooth'})">✅ 결정 사항</div>
+          <div class="toc-item" onclick="activeToc(this);document.getElementById('sec-actions').scrollIntoView({behavior:'smooth'})">⚡ 액션 아이템</div>
           <div class="toc-item" onclick="activeToc(this);document.getElementById('sec-transcript').scrollIntoView({behavior:'smooth'})">🎙 발화 기록</div>
         </div>
       </div>
@@ -857,50 +733,6 @@ select.input{appearance:none;cursor:pointer;}
         <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
           <button class="btn btn-primary btn-sm" onclick="saveSystemSettings()">설정 저장</button>
           <span id="settings-save-msg" style="font-size:12px;color:var(--text2)"></span>
-        </div>
-
-        <!-- ── 음성인식 교정 규칙 (Rule-based) ──────────────────────── -->
-        <div style="font-size:14px;font-weight:700;margin-top:32px;margin-bottom:4px">음성인식 교정 규칙 관리</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:14px">Aho-Corasick 기반 Rule-based 후처리입니다. 음성인식이 잘못 인식하는 표현과 올바른 표현을 등록하면 LLM 후처리 이전에 자동으로 교정됩니다.</div>
-
-        <div style="border:1px solid var(--border);border-radius:8px;padding:16px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-            <div style="font-size:13px;font-weight:600;">등록된 규칙 <span id="correction-rules-count" style="color:var(--accent);font-weight:700;">0</span>개</div>
-          </div>
-          <div style="overflow-x:auto;margin-bottom:14px;">
-            <table style="width:100%;border-collapse:collapse;font-size:12px;" id="correction-rules-table">
-              <thead>
-                <tr style="border-bottom:1px solid var(--border);color:var(--text3);">
-                  <th style="text-align:left;padding:6px 8px;font-weight:600;">오인식 표현</th>
-                  <th style="text-align:left;padding:6px 8px;font-weight:600;">→</th>
-                  <th style="text-align:left;padding:6px 8px;font-weight:600;">올바른 표현</th>
-                  <th style="text-align:left;padding:6px 8px;font-weight:600;">설명</th>
-                  <th style="padding:6px 8px;width:60px;"></th>
-                </tr>
-              </thead>
-              <tbody id="correction-rules-tbody">
-                <tr id="correction-rules-empty"><td colspan="5" style="text-align:center;padding:16px;color:var(--text3);">등록된 교정 규칙이 없습니다.</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div style="border-top:1px solid var(--border);padding-top:14px;">
-            <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text2);">새 규칙 추가</div>
-            <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
-              <div style="flex:1;min-width:140px;">
-                <div style="font-size:11px;color:var(--text2);margin-bottom:3px;">오인식 표현</div>
-                <input class="input" id="correction-wrong-input" placeholder="예: 인공지능" maxlength="200" style="width:100%">
-              </div>
-              <div style="flex:1;min-width:140px;">
-                <div style="font-size:11px;color:var(--text2);margin-bottom:3px;">올바른 표현</div>
-                <input class="input" id="correction-correct-input" placeholder="예: AI" maxlength="200" style="width:100%">
-              </div>
-              <div style="flex:2;min-width:180px;">
-                <div style="font-size:11px;color:var(--text2);margin-bottom:3px;">설명 (선택)</div>
-                <input class="input" id="correction-desc-input" placeholder="예: 약어, 고유명사 등" maxlength="200" style="width:100%" onkeydown="if(event.key==='Enter')addCorrectionRule()">
-              </div>
-              <button class="btn btn-primary btn-sm" onclick="addCorrectionRule()" style="white-space:nowrap;">+ 규칙 추가</button>
-            </div>
-          </div>
         </div>
 
         <!-- ── 전역 용어사전 ──────────────────────────────────────────── -->
@@ -999,34 +831,6 @@ select.input{appearance:none;cursor:pointer;}
               </div>
             </div>
             <button id="qna-reply-btn" class="btn btn-ghost btn-sm" style="display:none;margin-top:6px;" onclick="document.getElementById('qna-reply-form').style.display='';document.getElementById('qna-reply-btn').style.display='none'">답변 작성</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── 나의 용어사전 ──────────────────────────────────────────────────────── -->
-    <div id="page-glossary" class="page">
-      <div style="padding:0 28px;flex-shrink:0;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;height:56px;">
-        <div style="font-size:18px;font-weight:700;">나의 용어사전</div>
-        <span class="glossary-count" id="user-glossary-count">0개 등록됨</span>
-      </div>
-      <div style="flex:1;overflow-y:auto;padding:28px 32px;display:flex;flex-direction:column;gap:20px;">
-        <div class="card" style="display:flex;flex-direction:column;gap:14px;">
-          <div>
-            <div class="section-label" style="margin-bottom:8px;">용어 추가</div>
-            <div class="glossary-add-wrap">
-              <input id="user-glossary-input" class="input" placeholder="용어를 입력하세요..." maxlength="100" onkeydown="if(event.key==='Enter')addUserTerm()">
-              <button class="btn btn-primary" onclick="addUserTerm()" style="white-space:nowrap;">+ 추가</button>
-            </div>
-            <div style="font-size:11px;color:var(--text3);margin-top:6px;">STT 후처리 시 자동으로 반영됩니다.</div>
-          </div>
-        </div>
-        <div class="card" style="flex:1;display:flex;flex-direction:column;gap:10px;">
-          <div class="section-label" style="margin-bottom:0;">등록된 용어</div>
-          <div class="glossary-tags-wrap" id="user-glossary-tags" style="min-height:80px;"></div>
-          <div class="empty-state" id="glossary-empty" style="display:none;flex:1;">
-            <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="8" y="6" width="32" height="36" rx="4"/><path d="M16 18h16M16 26h16M16 34h8"/></svg>
-            <p>등록된 용어가 없습니다. 용어를 추가해보세요.</p>
           </div>
         </div>
       </div>
@@ -1279,18 +1083,17 @@ function doLogout() {
 }
 
 // ── Navigation ────────────────────────────────────────────────────────────────
-const pageMap = { new: 'page-new', my: 'page-my', detail: 'page-detail', processing: 'page-processing', admin: 'page-admin', notices: 'page-notices', qna: 'page-qna', glossary: 'page-glossary' };
+const pageMap = { new: 'page-new', my: 'page-my', detail: 'page-detail', processing: 'page-processing', admin: 'page-admin', notices: 'page-notices', qna: 'page-qna' };
 function setNav(el, key) {
   document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
   if (el) el.classList.add('active');
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(pageMap[key])?.classList.add('active');
   if (key === 'my') loadList();
-  if (key === 'admin') { loadAdminStats(); loadAdminGlossary(); loadCorrectionRules(); }
+  if (key === 'admin') { loadAdminStats(); loadAdminGlossary(); }
   if (key === 'new') resetNewForm();
   if (key === 'notices') loadNotices();
   if (key === 'qna') loadQna();
-  if (key === 'glossary') loadUserGlossary();
 }
 
 // ── 공지사항 ──────────────────────────────────────────────────────────────────
@@ -1609,9 +1412,18 @@ function renderDetail(m) {
   document.getElementById('d-date').value = m.meeting_date || '';
   document.getElementById('d-location').value = m.location;
   document.getElementById('d-attendees').value = m.attendees;
-  document.getElementById('d-summary').innerHTML = (typeof marked !== 'undefined' && m.summary) ? marked.parse(m.summary) : (m.summary || '').replace(/\n/g, '<br>');
+  document.getElementById('d-summary').value = m.summary || '';
   document.getElementById('export-meeting-title').textContent = m.title;
   document.getElementById('export-filename').value = m.title;
+
+  const dl = document.getElementById('decisions-list');
+  dl.innerHTML = '';
+  (m.decisions || []).forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'decision-item';
+    el.textContent = d.content;
+    dl.appendChild(el);
+  });
 
   const al = document.getElementById('actions-list');
   al.innerHTML = '';
@@ -1650,9 +1462,19 @@ async function saveDetail() {
       meeting_date: document.getElementById('d-date').value || null,
       location: document.getElementById('d-location').value,
       attendees: document.getElementById('d-attendees').value,
+      summary: document.getElementById('d-summary').value,
     });
     toast('저장되었습니다.', 'ok');
   } catch (e) { toast('저장 실패: ' + e.message, 'err'); }
+}
+
+function addDecision() {
+  const t = prompt('결정 사항:');
+  if (!t) return;
+  const el = document.createElement('div');
+  el.className = 'decision-item';
+  el.textContent = t;
+  document.getElementById('decisions-list').appendChild(el);
 }
 
 // ── New meeting form ──────────────────────────────────────────────────────────
@@ -2166,6 +1988,15 @@ async function bulkDelete() {
 }
 
 // ── 사용자 용어사전 ───────────────────────────────────────────────────────────
+let _glossaryOpen = false;
+
+function toggleGlossaryPanel(el) {
+  _glossaryOpen = !_glossaryOpen;
+  const panel = document.getElementById('glossary-panel');
+  panel.classList.toggle('collapsed', !_glossaryOpen);
+  el?.classList.toggle('active', _glossaryOpen);
+  if (_glossaryOpen) loadUserGlossary();
+}
 
 async function loadUserGlossary() {
   try {
@@ -2178,18 +2009,11 @@ async function loadUserGlossary() {
 function renderUserGlossary(items, total) {
   document.getElementById('user-glossary-count').textContent = `${total}개 등록됨`;
   const wrap = document.getElementById('user-glossary-tags');
-  const empty = document.getElementById('glossary-empty');
-  if (items.length === 0) {
-    wrap.innerHTML = '';
-    if (empty) empty.style.display = 'flex';
-  } else {
-    if (empty) empty.style.display = 'none';
-    wrap.innerHTML = items.map(t => `
-      <span class="glossary-tag">
-        ${esc(t.term)}${t.description ? ` <span style="color:var(--text3);font-size:10px;">(${esc(t.description)})</span>` : ''}
-        <span class="del-btn" onclick="deleteUserTerm(${t.id})" title="삭제">✕</span>
-      </span>`).join('');
-  }
+  wrap.innerHTML = items.map(t => `
+    <span class="glossary-tag">
+      ${esc(t.term)}${t.description ? ` <span style="color:var(--text3);font-size:10px;">(${esc(t.description)})</span>` : ''}
+      <span class="del-btn" onclick="deleteUserTerm(${t.id})" title="삭제">✕</span>
+    </span>`).join('');
 }
 
 async function addUserTerm() {
@@ -2208,105 +2032,6 @@ async function deleteUserTerm(id) {
     await api('DELETE', `/glossary/user/${id}`);
     loadUserGlossary();
   } catch (e) { toast('삭제 실패: ' + e.message, 'err'); }
-}
-
-// ── 음성인식 교정 규칙 (Rule-based) ──────────────────────────────────────────
-let _editingRuleId = null;
-
-async function loadCorrectionRules() {
-  try {
-    const data = await api('GET', '/glossary/admin/rules');
-    renderCorrectionRules(data.items, data.total);
-  } catch(e) {}
-}
-
-function renderCorrectionRules(items, total) {
-  document.getElementById('correction-rules-count').textContent = total;
-  const tbody = document.getElementById('correction-rules-tbody');
-  if (!items || items.length === 0) {
-    tbody.innerHTML = '<tr id="correction-rules-empty"><td colspan="5" style="text-align:center;padding:16px;color:var(--text3);">등록된 교정 규칙이 없습니다.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = items.map(r => `
-    <tr style="border-bottom:1px solid var(--border);" id="rule-row-${r.id}">
-      <td style="padding:7px 8px;">
-        <span id="rule-wrong-text-${r.id}">${esc(r.wrong)}</span>
-        <input id="rule-wrong-edit-${r.id}" class="input" style="display:none;width:100%;font-size:12px;" value="${esc(r.wrong)}" maxlength="200">
-      </td>
-      <td style="padding:7px 8px;color:var(--text3);">→</td>
-      <td style="padding:7px 8px;">
-        <span id="rule-correct-text-${r.id}">${esc(r.correct)}</span>
-        <input id="rule-correct-edit-${r.id}" class="input" style="display:none;width:100%;font-size:12px;" value="${esc(r.correct)}" maxlength="200">
-      </td>
-      <td style="padding:7px 8px;color:var(--text3);font-size:11px;">
-        <span id="rule-desc-text-${r.id}">${esc(r.description)}</span>
-        <input id="rule-desc-edit-${r.id}" class="input" style="display:none;width:100%;font-size:12px;" value="${esc(r.description)}" maxlength="200">
-      </td>
-      <td style="padding:7px 8px;white-space:nowrap;">
-        <span id="rule-actions-${r.id}">
-          <button onclick="startEditRule(${r.id})" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:11px;padding:2px 5px;">수정</button>
-          <button onclick="deleteRule(${r.id})" style="background:none;border:none;cursor:pointer;color:#e55;font-size:11px;padding:2px 5px;">삭제</button>
-        </span>
-        <span id="rule-edit-actions-${r.id}" style="display:none;">
-          <button onclick="saveEditRule(${r.id})" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:11px;padding:2px 5px;">저장</button>
-          <button onclick="cancelEditRule(${r.id})" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;padding:2px 5px;">취소</button>
-        </span>
-      </td>
-    </tr>`).join('');
-}
-
-function startEditRule(id) {
-  ['wrong','correct','desc'].forEach(f => {
-    document.getElementById(`rule-${f}-text-${id}`).style.display = 'none';
-    document.getElementById(`rule-${f}-edit-${id}`).style.display = 'block';
-  });
-  document.getElementById(`rule-actions-${id}`).style.display = 'none';
-  document.getElementById(`rule-edit-actions-${id}`).style.display = 'inline';
-}
-
-function cancelEditRule(id) {
-  ['wrong','correct','desc'].forEach(f => {
-    document.getElementById(`rule-${f}-text-${id}`).style.display = 'inline';
-    document.getElementById(`rule-${f}-edit-${id}`).style.display = 'none';
-  });
-  document.getElementById(`rule-actions-${id}`).style.display = 'inline';
-  document.getElementById(`rule-edit-actions-${id}`).style.display = 'none';
-}
-
-async function saveEditRule(id) {
-  const wrong = document.getElementById(`rule-wrong-edit-${id}`).value.trim();
-  const correct = document.getElementById(`rule-correct-edit-${id}`).value.trim();
-  const description = document.getElementById(`rule-desc-edit-${id}`).value.trim();
-  if (!wrong || !correct) { toast('오인식 표현과 올바른 표현을 모두 입력해주세요.', 'err'); return; }
-  try {
-    await api('PUT', `/glossary/admin/rules/${id}`, { wrong, correct, description });
-    loadCorrectionRules();
-    toast('교정 규칙이 수정되었습니다.', 'ok');
-  } catch(e) { toast('수정 실패: ' + (e.message||'오류'), 'err'); }
-}
-
-async function addCorrectionRule() {
-  const wrong = document.getElementById('correction-wrong-input').value.trim();
-  const correct = document.getElementById('correction-correct-input').value.trim();
-  const description = document.getElementById('correction-desc-input').value.trim();
-  if (!wrong || !correct) { toast('오인식 표현과 올바른 표현을 모두 입력해주세요.', 'err'); return; }
-  try {
-    await api('POST', '/glossary/admin/rules', { wrong, correct, description });
-    document.getElementById('correction-wrong-input').value = '';
-    document.getElementById('correction-correct-input').value = '';
-    document.getElementById('correction-desc-input').value = '';
-    loadCorrectionRules();
-    toast('교정 규칙이 추가되었습니다.', 'ok');
-  } catch(e) { toast('추가 실패: ' + (e.message||'오류'), 'err'); }
-}
-
-async function deleteRule(id) {
-  if (!confirm('이 교정 규칙을 삭제하겠습니까?')) return;
-  try {
-    await api('DELETE', `/glossary/admin/rules/${id}`);
-    loadCorrectionRules();
-    toast('삭제되었습니다.', 'ok');
-  } catch(e) { toast('삭제 실패', 'err'); }
 }
 
 // ── 관리자 전역 용어사전 ──────────────────────────────────────────────────────
