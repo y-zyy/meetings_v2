@@ -1292,6 +1292,9 @@ function doLogout() {
   _token = null; _me = null;
   sessionStorage.removeItem('kai_consent');
   fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+  document.getElementById('sb-admin').style.display = 'none';
+  document.getElementById('sb-admin-badge').style.display = 'none';
+  document.getElementById('sb-role').textContent = '-';
   document.getElementById('consent-overlay').classList.add('hidden');
   document.getElementById('login-overlay').classList.remove('hidden');
   document.getElementById('login-username').value = '';
