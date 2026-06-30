@@ -649,10 +649,11 @@ select.input{appearance:none;cursor:pointer;}
                 <input class="input" id="meeting-location" placeholder="예: 3층 대회의실, 화상회의">
               </div>
               <div class="field">
-                <div class="field-label">참석자</div>
+                <div class="field-label">참석자 *</div>
                 <input class="input" id="meeting-attendees" placeholder="홍길동, 김영희, 박민수">
               </div>
             </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:-8px;margin-bottom:8px;">* 표시 항목은 필수입니다. 입력한 정보는 이후 회의록 상세 화면에서 수정할 수 있습니다.</div>
             <div class="field" style="margin-top:4px;">
               <div class="field-label">회의 안건 및 관련 주요 키워드 <span style="font-size:10px;color:var(--text3);font-weight:400;">(선택 · AI 회의록 생성 시 문맥에 반영됩니다)</span></div>
               <textarea class="input" id="meeting-agenda" rows="4" placeholder="회의에서 다룰 안건을 미리 입력하시면, AI가 해당 내용을 참고하여 보다 정확하고 구조화된 회의록을 생성합니다."></textarea>
@@ -1791,6 +1792,8 @@ function stopRec() {
 function submitMeeting() {
   const title = document.getElementById('meeting-title').value.trim();
   if (!title) { toast('회의 제목을 입력해주세요.', 'err'); return; }
+  const attendees = document.getElementById('meeting-attendees').value.trim();
+  if (!attendees) { toast('참석자를 입력해주세요.', 'err'); return; }
   if (!_selectedFile) { toast('음성 파일이 없습니다.', 'err'); return; }
 
   const fd = new FormData();
