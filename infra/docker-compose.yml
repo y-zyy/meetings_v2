@@ -93,7 +93,7 @@ services:
         condition: service_healthy
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ../service/frontend:/usr/share/nginx/html:ro
+      - ../service/frontend:/usr/share/nginx/html:ro  # login-bg.jpg 파일을 이 폴더에 넣으면 로그인 배경 이미지로 적용됨
     networks:
       - internal
 
