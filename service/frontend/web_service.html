@@ -280,7 +280,7 @@ select.input{appearance:none;cursor:pointer;}
 
 /* PROCESSING */
 .proc-wrap{flex:1;display:flex;align-items:center;justify-content:center;}
-.proc-card{width:520px;}
+.proc-card{width:1040px;min-height:900px;}
 .terminal{background:#1a1d23;border-radius:var(--rs);padding:12px 14px;font-family:var(--mono);font-size:11px;line-height:1.8;max-height:160px;overflow-y:auto;color:#8b95aa;margin-top:14px;}
 .log-ok{color:#2dd4bf;}.log-info{color:#4285f4;}.log-t{color:#4d5a70;}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -649,21 +649,13 @@ select.input{appearance:none;cursor:pointer;}
                 <input class="input" id="meeting-location" placeholder="예: 3층 대회의실, 화상회의">
               </div>
               <div class="field">
-                <div class="field-label">언어</div>
-                <select class="input" id="meeting-language"><option value="ko">한국어</option><option value="en">English</option></select>
+                <div class="field-label">참석자</div>
+                <input class="input" id="meeting-attendees" placeholder="홍길동, 김영희, 박민수">
               </div>
             </div>
             <div class="field" style="margin-top:4px;">
-              <div class="field-label">참석자</div>
-              <input class="input" id="meeting-attendees" placeholder="홍길동, 김영희, 박민수">
-            </div>
-            <div class="field" style="margin-top:4px;">
-              <div class="field-label">회의 안건 <span style="font-size:10px;color:var(--text3);font-weight:400;">(선택 · AI 회의록 생성 시 문맥에 반영됩니다)</span></div>
+              <div class="field-label">회의 안건 및 관련 주요 키워드 <span style="font-size:10px;color:var(--text3);font-weight:400;">(선택 · AI 회의록 생성 시 문맥에 반영됩니다)</span></div>
               <textarea class="input" id="meeting-agenda" rows="4" placeholder="회의에서 다룰 안건을 미리 입력하시면, AI가 해당 내용을 참고하여 보다 정확하고 구조화된 회의록을 생성합니다."></textarea>
-            </div>
-            <div class="field">
-              <div class="field-label">참고 사항 (선택)</div>
-              <textarea class="input" id="meeting-notes" rows="2" placeholder="회의록 작성 시 참고할 내용을 입력하세요."></textarea>
             </div>
             <!-- Upload progress (shown during submit) -->
             <div id="upload-prog-wrap" style="display:none;margin-bottom:12px;">
@@ -1808,8 +1800,7 @@ function submitMeeting() {
   fd.append('location', document.getElementById('meeting-location').value);
   fd.append('attendees', document.getElementById('meeting-attendees').value);
   fd.append('agenda', document.getElementById('meeting-agenda').value);
-  fd.append('notes', document.getElementById('meeting-notes').value);
-  fd.append('language', document.getElementById('meeting-language').value);
+  fd.append('notes', '');
 
   const btn = document.getElementById('submit-btn');
   btn.disabled = true;
