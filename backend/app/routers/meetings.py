@@ -302,6 +302,7 @@ async def export_meeting(
 
     from app.services import export as export_svc
 
+    from urllib.parse import quote
     safe_title = "".join(c if c.isalnum() or c in " _-" else "_" for c in meeting.title)[:50]
 
     if fmt == "docx":
@@ -317,8 +318,9 @@ async def export_meeting(
         media = "text/plain; charset=utf-8"
         filename = f"{safe_title}.txt"
 
+    encoded_filename = quote(filename, safe="")
     return Response(
         content=data,
         media_type=media,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"},
     )
