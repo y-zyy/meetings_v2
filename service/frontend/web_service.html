@@ -422,6 +422,7 @@ select.input{appearance:none;cursor:pointer;}
   <div class="login-box">
     <div class="login-logo"><span style="color:#1B1464;">KA</span><span style="color:#8a8a8a;">I</span><span style="color:#1B1464;"> MEET</span><span style="color:#8a8a8a;">I</span><span style="color:#1B1464;">NGS</span></div>
     <div class="login-sub">Korea Aerospace Industries, Ltd.</div>
+    <div class="login-sub">사내 회의록 작성 AI 서비스</div>
 
     <!-- 탭 -->
     <div class="login-tab">
@@ -431,7 +432,7 @@ select.input{appearance:none;cursor:pointer;}
 
     <!-- 로그인 폼 -->
     <div id="login-form-wrap">
-      <div class="field"><div class="field-label">아이디</div><input class="input" id="login-username" placeholder="아이디 (이메일 앞부분)" autocomplete="username"></div>
+      <div class="field"><div class="field-label">아이디</div><input class="input" id="login-username" placeholder="사번" autocomplete="username"></div>
       <div class="field"><div class="field-label">비밀번호</div><input class="input" id="login-password" type="password" placeholder="비밀번호" autocomplete="current-password"></div>
       <div class="login-err" id="login-err"></div>
       <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()">로그인</button>
@@ -445,7 +446,7 @@ select.input{appearance:none;cursor:pointer;}
       </div>
 
       <div class="field">
-        <div class="field-label">아이디 <span style="color:#6b7280;font-weight:400;">(이메일 앞부분)</span></div>
+        <div class="field-label">아이디 <span style="color:#6b7280;font-weight:400;">(사번)</span></div>
         <div style="display:flex;align-items:flex-start;gap:6px;">
           <div style="flex:1;">
             <div class="email-input-wrap">
