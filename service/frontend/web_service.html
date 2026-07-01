@@ -1635,35 +1635,9 @@ function renderDetail(m) {
   document.getElementById('export-meeting-title').textContent = m.title;
   document.getElementById('export-filename').value = m.title;
 
-  const al = document.getElementById('actions-list');
-  al.innerHTML = '';
-  (m.action_items || []).forEach(item => {
-    const done = item.status === 'done';
-    const row = document.createElement('div');
-    row.className = 'action-row';
-    row.innerHTML = `
-      <div class="checkbox ${done ? 'checked' : ''}" onclick="toggleActionItem(this, ${item.id})">${done ? '✓' : ''}</div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:500">${esc(item.content)}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px">담당: ${esc(item.assignee || '-')} · 기한: ${item.due_date || '미지정'}</div>
-      </div>
-      <span class="badge ${done ? 'b-done' : 'b-proc'}">${done ? '완료' : '진행 중'}</span>`;
-    al.appendChild(row);
-  });
-
   document.getElementById('transcript-text').textContent = m.transcript || '(발화 기록 없음)';
 }
 
-async function toggleActionItem(el, itemId) {
-  const done = !el.classList.contains('checked');
-  try {
-    await api('PATCH', `/meetings/${_activeMeetingId}/action-items/${itemId}`, { status: done ? 'done' : 'pending' });
-    el.classList.toggle('checked', done);
-    el.textContent = done ? '✓' : '';
-    const badge = el.closest('.action-row')?.querySelector('.badge');
-    if (badge) { badge.className = `badge ${done ? 'b-done' : 'b-proc'}`; badge.textContent = done ? '완료' : '진행 중'; }
-  } catch (e) { toast('저장 실패: ' + e.message, 'err'); }
-}
 
 async function saveDetail() {
   try {
