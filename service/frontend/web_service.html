@@ -754,12 +754,6 @@ select.input{appearance:none;cursor:pointer;}
             <div class="section-label">주요 내용 요약</div>
             <div id="d-summary" class="markdown-body" style="font-size:13px;line-height:1.8;padding:10px 12px;border:1px solid var(--border);border-radius:var(--rs);background:var(--bg);min-height:80px;overflow-x:auto;"></div>
           </div>
-<div class="card-sm mb12" id="sec-actions">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-              <div class="section-label" style="margin:0">액션 아이템</div>
-            </div>
-            <div id="actions-list"></div>
-          </div>
           <div class="card-sm" id="sec-transcript">
             <div class="section-label">발화 기록 (ASR)</div>
             <div id="transcript-text" style="font-size:13px;color:var(--text);line-height:1.7;white-space:pre-wrap;max-height:400px;overflow-y:auto;"></div>
@@ -769,7 +763,6 @@ select.input{appearance:none;cursor:pointer;}
           <div class="section-label">목차</div>
           <div class="toc-item active" onclick="activeToc(this);document.getElementById('sec-info').scrollIntoView({behavior:'smooth'})">📋 회의 정보</div>
           <div class="toc-item" onclick="activeToc(this);document.getElementById('sec-summary').scrollIntoView({behavior:'smooth'})">📝 요약</div>
-<div class="toc-item" onclick="activeToc(this);document.getElementById('sec-actions').scrollIntoView({behavior:'smooth'})">⚡ 액션 아이템</div>
           <div class="toc-item" onclick="activeToc(this);document.getElementById('sec-transcript').scrollIntoView({behavior:'smooth'})">🎙 발화 기록</div>
         </div>
       </div>
