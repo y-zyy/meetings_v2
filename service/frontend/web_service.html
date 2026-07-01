@@ -755,12 +755,6 @@ select.input{appearance:none;cursor:pointer;}
             <div class="section-label">주요 내용 요약</div>
             <div id="d-summary" class="markdown-body" style="font-size:13px;line-height:1.8;padding:10px 12px;border:1px solid var(--border);border-radius:var(--rs);background:var(--bg);min-height:80px;overflow-x:auto;"></div>
           </div>
-<div class="card-sm mb12" id="sec-actions">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-              <div class="section-label" style="margin:0">액션 아이템</div>
-            </div>
-            <div id="actions-list"></div>
-          </div>
           <div class="card-sm" id="sec-transcript">
             <div class="section-label">발화 기록 (ASR)</div>
             <div id="transcript-text" style="font-size:13px;color:var(--text);line-height:1.7;white-space:pre-wrap;max-height:400px;overflow-y:auto;"></div>
@@ -770,7 +764,6 @@ select.input{appearance:none;cursor:pointer;}
           <div class="section-label">목차</div>
           <div class="toc-item active" onclick="activeToc(this);document.getElementById('sec-info').scrollIntoView({behavior:'smooth'})">📋 회의 정보</div>
           <div class="toc-item" onclick="activeToc(this);document.getElementById('sec-summary').scrollIntoView({behavior:'smooth'})">📝 요약</div>
-<div class="toc-item" onclick="activeToc(this);document.getElementById('sec-actions').scrollIntoView({behavior:'smooth'})">⚡ 액션 아이템</div>
           <div class="toc-item" onclick="activeToc(this);document.getElementById('sec-transcript').scrollIntoView({behavior:'smooth'})">🎙 발화 기록</div>
         </div>
       </div>
@@ -1642,35 +1635,9 @@ function renderDetail(m) {
   document.getElementById('export-meeting-title').textContent = m.title;
   document.getElementById('export-filename').value = m.title;
 
-  const al = document.getElementById('actions-list');
-  al.innerHTML = '';
-  (m.action_items || []).forEach(item => {
-    const done = item.status === 'done';
-    const row = document.createElement('div');
-    row.className = 'action-row';
-    row.innerHTML = `
-      <div class="checkbox ${done ? 'checked' : ''}" onclick="toggleActionItem(this, ${item.id})">${done ? '✓' : ''}</div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:500">${esc(item.content)}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px">담당: ${esc(item.assignee || '-')} · 기한: ${item.due_date || '미지정'}</div>
-      </div>
-      <span class="badge ${done ? 'b-done' : 'b-proc'}">${done ? '완료' : '진행 중'}</span>`;
-    al.appendChild(row);
-  });
-
   document.getElementById('transcript-text').textContent = m.transcript || '(발화 기록 없음)';
 }
 
-async function toggleActionItem(el, itemId) {
-  const done = !el.classList.contains('checked');
-  try {
-    await api('PATCH', `/meetings/${_activeMeetingId}/action-items/${itemId}`, { status: done ? 'done' : 'pending' });
-    el.classList.toggle('checked', done);
-    el.textContent = done ? '✓' : '';
-    const badge = el.closest('.action-row')?.querySelector('.badge');
-    if (badge) { badge.className = `badge ${done ? 'b-done' : 'b-proc'}`; badge.textContent = done ? '완료' : '진행 중'; }
-  } catch (e) { toast('저장 실패: ' + e.message, 'err'); }
-}
 
 async function saveDetail() {
   try {

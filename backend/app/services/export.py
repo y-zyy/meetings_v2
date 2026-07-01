@@ -274,22 +274,6 @@ def build_docx(meeting) -> bytes:
     doc.add_heading("주요 내용 요약", level=2)
     _docx_add_markdown(doc, meeting.summary)
 
-    # Action items
-    doc.add_heading("액션 아이템", level=2)
-    if meeting.action_items:
-        at = doc.add_table(rows=1, cols=4)
-        at.style = "Table Grid"
-        hdr = at.rows[0].cells
-        for i, h in enumerate(["내용", "담당자", "기한", "상태"]):
-            hdr[i].text = h
-            hdr[i].paragraphs[0].runs[0].bold = True
-        for item in meeting.action_items:
-            row = at.add_row().cells
-            row[0].text = item.content
-            row[1].text = item.assignee or "-"
-            row[2].text = _fmt_date(item.due_date)
-            row[3].text = "완료" if item.status == "done" else "진행 중"
-
     buf = io.BytesIO()
     doc.save(buf)
     return buf.getvalue()
@@ -419,30 +403,6 @@ def build_pdf(meeting) -> bytes:
         story.append(Paragraph("주요 내용 요약", h2))
         _pdf_add_markdown(story, meeting.summary, body, h2, _KO_FONT, _KO_FONT_BOLD)
 
-    if meeting.action_items:
-        story.append(Paragraph("액션 아이템", h2))
-        ai_data = [["내용", "담당자", "기한", "상태"]]
-        for item in meeting.action_items:
-            ai_data.append([
-                item.content or "-",
-                item.assignee or "-",
-                _fmt_date(item.due_date),
-                "완료" if item.status == "done" else "진행 중",
-            ])
-        ai_tbl = Table(ai_data, colWidths=[9*cm, 3*cm, 2.5*cm, 2.5*cm])
-        ai_tbl.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), _ACCENT),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("FONTNAME", (0, 0), (-1, -1), _KO_FONT),
-            ("FONTNAME", (0, 0), (-1, 0), _KO_FONT_BOLD),
-            ("FONTSIZE", (0, 0), (-1, -1), 9),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#d2d5da")),
-            ("ROWBACKGROUNDS", (1, 0), (-1, -1), [colors.white, colors.HexColor("#fafafa")]),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 6),
-        ]))
-        story.append(ai_tbl)
-
     doc.build(story)
     return buf.getvalue()
 
@@ -462,8 +422,4 @@ def build_txt(meeting) -> bytes:
         meeting.summary or "",
         "",
     ]
-    lines += ["", "[액션 아이템]"]
-    for item in meeting.action_items:
-        status_label = "완료" if item.status == "done" else "진행 중"
-        lines.append(f"  • {item.content} / 담당: {item.assignee or '-'} / 기한: {_fmt_date(item.due_date)} / {status_label}")
     return "\n".join(lines).encode("utf-8")
