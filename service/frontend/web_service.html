@@ -167,11 +167,14 @@ input,select,textarea{font-family:var(--font);}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
 
 /* LOGIN OVERLAY */
-#login-overlay{position:fixed;inset:0;z-index:1000;background:rgba(27,20,100,.97);display:flex;align-items:center;justify-content:center;}
+#login-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:stretch;}
 #login-overlay.hidden{display:none;}
-.login-box{background:#fff;border-radius:16px;padding:36px 40px;width:380px;box-shadow:0 20px 60px rgba(0,0,0,.3);}
-.login-logo{font-size:22px;font-weight:800;letter-spacing:2px;font-family:'Arial Black','Arial',sans-serif;text-transform:uppercase;margin-bottom:4px;}
-.login-sub{font-size:10px;font-weight:600;letter-spacing:2.5px;color:#1B1464;margin-bottom:28px;font-family:Arial,sans-serif;text-transform:uppercase;}
+.login-panel{flex:3;background:#fff;display:flex;align-items:center;justify-content:center;padding:48px 40px;overflow-y:auto;}
+.login-image-panel{flex:7;background-color:#1B1464;background-image:url('/login-bg.jpg'),linear-gradient(135deg,#1B1464 0%,#2d3a8c 50%,#0f0c3c 100%);background-size:cover,cover;background-position:center,center;background-repeat:no-repeat,no-repeat;position:relative;}
+.login-image-panel-overlay{position:absolute;inset:0;background:rgba(15,12,60,.35);}
+.login-box{width:100%;max-width:420px;}
+.login-logo{font-size:26px;font-weight:800;letter-spacing:2px;font-family:'Arial Black','Arial',sans-serif;text-transform:uppercase;margin-bottom:4px;}
+.login-sub{font-size:10px;font-weight:600;letter-spacing:2.5px;color:#1B1464;margin-bottom:32px;font-family:Arial,sans-serif;text-transform:uppercase;}
 .login-err{font-size:12px;color:var(--red);margin-bottom:10px;min-height:18px;}
 .login-ok{font-size:12px;color:#16a34a;margin-bottom:10px;min-height:18px;}
 .login-tab{display:flex;gap:0;margin-bottom:24px;border-bottom:2px solid #e5e7eb;}
@@ -280,7 +283,7 @@ select.input{appearance:none;cursor:pointer;}
 
 /* PROCESSING */
 .proc-wrap{flex:1;display:flex;align-items:center;justify-content:center;}
-.proc-card{width:520px;}
+.proc-card{width:1040px;min-height:900px;}
 .terminal{background:#1a1d23;border-radius:var(--rs);padding:12px 14px;font-family:var(--mono);font-size:11px;line-height:1.8;max-height:160px;overflow-y:auto;color:#8b95aa;margin-top:14px;}
 .log-ok{color:#2dd4bf;}.log-info{color:#4285f4;}.log-t{color:#4d5a70;}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -414,9 +417,12 @@ select.input{appearance:none;cursor:pointer;}
 
 <!-- ── LOGIN OVERLAY ────────────────────────────────────────────────────── -->
 <div id="login-overlay">
-  <div class="login-box" style="width:420px;">
+  <!-- 왼쪽 40%: 로그인 폼 -->
+  <div class="login-panel">
+  <div class="login-box">
     <div class="login-logo"><span style="color:#1B1464;">KA</span><span style="color:#8a8a8a;">I</span><span style="color:#1B1464;"> MEET</span><span style="color:#8a8a8a;">I</span><span style="color:#1B1464;">NGS</span></div>
     <div class="login-sub">Korea Aerospace Industries, Ltd.</div>
+    <div class="login-sub">사내 회의록 작성 AI 서비스</div>
 
     <!-- 탭 -->
     <div class="login-tab">
@@ -426,7 +432,7 @@ select.input{appearance:none;cursor:pointer;}
 
     <!-- 로그인 폼 -->
     <div id="login-form-wrap">
-      <div class="field"><div class="field-label">아이디</div><input class="input" id="login-username" placeholder="아이디 (이메일 앞부분)" autocomplete="username"></div>
+      <div class="field"><div class="field-label">아이디</div><input class="input" id="login-username" placeholder="사번" autocomplete="username"></div>
       <div class="field"><div class="field-label">비밀번호</div><input class="input" id="login-password" type="password" placeholder="비밀번호" autocomplete="current-password"></div>
       <div class="login-err" id="login-err"></div>
       <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()">로그인</button>
@@ -440,7 +446,7 @@ select.input{appearance:none;cursor:pointer;}
       </div>
 
       <div class="field">
-        <div class="field-label">아이디 <span style="color:#6b7280;font-weight:400;">(이메일 앞부분)</span></div>
+        <div class="field-label">아이디 <span style="color:#6b7280;font-weight:400;">(사번)</span></div>
         <div style="display:flex;align-items:flex-start;gap:6px;">
           <div style="flex:1;">
             <div class="email-input-wrap">
@@ -472,6 +478,12 @@ select.input{appearance:none;cursor:pointer;}
       <div class="login-ok" id="register-ok" style="display:none;"></div>
       <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doRegister()">회원가입</button>
     </div>
+  </div>
+  </div><!-- /login-panel -->
+
+  <!-- 오른쪽 60%: 배경 이미지 -->
+  <div class="login-image-panel" id="login-image-panel">
+    <div class="login-image-panel-overlay"></div>
   </div>
 </div>
 
@@ -649,21 +661,14 @@ select.input{appearance:none;cursor:pointer;}
                 <input class="input" id="meeting-location" placeholder="예: 3층 대회의실, 화상회의">
               </div>
               <div class="field">
-                <div class="field-label">언어</div>
-                <select class="input" id="meeting-language"><option value="ko">한국어</option><option value="en">English</option></select>
+                <div class="field-label">참석자 *</div>
+                <input class="input" id="meeting-attendees" placeholder="홍길동, 김영희, 박민수">
               </div>
             </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:-8px;margin-bottom:8px;">* 표시 항목은 필수입니다. 입력한 정보는 이후 회의록 상세 화면에서 수정할 수 있습니다.</div>
             <div class="field" style="margin-top:4px;">
-              <div class="field-label">참석자</div>
-              <input class="input" id="meeting-attendees" placeholder="홍길동, 김영희, 박민수">
-            </div>
-            <div class="field" style="margin-top:4px;">
-              <div class="field-label">회의 안건 <span style="font-size:10px;color:var(--text3);font-weight:400;">(선택 · AI 회의록 생성 시 문맥에 반영됩니다)</span></div>
+              <div class="field-label">회의 안건 및 관련 주요 키워드 <span style="font-size:10px;color:var(--text3);font-weight:400;">(선택 · AI 회의록 생성 시 문맥에 반영됩니다)</span></div>
               <textarea class="input" id="meeting-agenda" rows="4" placeholder="회의에서 다룰 안건을 미리 입력하시면, AI가 해당 내용을 참고하여 보다 정확하고 구조화된 회의록을 생성합니다."></textarea>
-            </div>
-            <div class="field">
-              <div class="field-label">참고 사항 (선택)</div>
-              <textarea class="input" id="meeting-notes" rows="2" placeholder="회의록 작성 시 참고할 내용을 입력하세요."></textarea>
             </div>
             <!-- Upload progress (shown during submit) -->
             <div id="upload-prog-wrap" style="display:none;margin-bottom:12px;">
@@ -1091,7 +1096,7 @@ select.input{appearance:none;cursor:pointer;}
 
 <script>
 // ── State ────────────────────────────────────────────────────────────────────
-let _token = localStorage.getItem('kai_token');
+let _token = null; // Access token lives in memory only (never localStorage)
 let _me = null;
 let _selectedFile = null;         // File object for upload
 let _mediaRecorder = null;
@@ -1116,7 +1121,17 @@ async function api(method, path, body, isJson = true) {
   } else if (body) {
     opts.body = body; // FormData
   }
-  const res = await fetch('/api' + path, opts);
+  let res = await fetch('/api' + path, opts);
+
+  // Access token expired → try silent refresh once
+  if (res.status === 401 && path !== '/auth/login') {
+    const refreshed = await tryRefreshToken();
+    if (refreshed) {
+      opts.headers['Authorization'] = `Bearer ${_token}`;
+      res = await fetch('/api' + path, opts);
+    }
+  }
+
   if (res.status === 401) { doLogout(); return null; }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
@@ -1124,6 +1139,18 @@ async function api(method, path, body, isJson = true) {
   }
   if (res.status === 204) return null;
   return res.json();
+}
+
+async function tryRefreshToken() {
+  try {
+    const res = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' });
+    if (!res.ok) return false;
+    const data = await res.json();
+    _token = data.access_token;
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
@@ -1149,7 +1176,6 @@ async function doLogin() {
     if (!res.ok) { const e = await res.json(); document.getElementById('login-err').textContent = e.detail; return; }
     const data = await res.json();
     _token = data.access_token;
-    localStorage.setItem('kai_token', _token);
     await afterLogin();
   } catch (e) {
     document.getElementById('login-err').textContent = '서버에 연결할 수 없습니다.';
@@ -1224,7 +1250,7 @@ async function afterLogin({ skipConsent = false } = {}) {
     _me = await api('GET', '/auth/me');
   } catch { doLogout(); return; }
   document.getElementById('login-overlay').classList.add('hidden');
-  if (skipConsent || localStorage.getItem('kai_consent') === '1') {
+  if (skipConsent || sessionStorage.getItem('kai_consent') === '1') {
     acceptConsent();
   } else {
     document.getElementById('consent-overlay').classList.remove('hidden');
@@ -1232,7 +1258,7 @@ async function afterLogin({ skipConsent = false } = {}) {
 }
 
 function acceptConsent() {
-  localStorage.setItem('kai_consent', '1');
+  sessionStorage.setItem('kai_consent', '1');
   document.getElementById('consent-overlay').classList.add('hidden');
   document.getElementById('topbar-user').textContent = _me.full_name || _me.username;
   document.getElementById('sb-fullname').textContent = _me.full_name || _me.username;
@@ -1269,8 +1295,11 @@ function declineConsent() {
 
 function doLogout() {
   _token = null; _me = null;
-  localStorage.removeItem('kai_token');
-  localStorage.removeItem('kai_consent');
+  sessionStorage.removeItem('kai_consent');
+  fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+  document.getElementById('sb-admin').style.display = 'none';
+  document.getElementById('sb-admin-badge').style.display = 'none';
+  document.getElementById('sb-role').textContent = '-';
   document.getElementById('consent-overlay').classList.add('hidden');
   document.getElementById('login-overlay').classList.remove('hidden');
   document.getElementById('login-username').value = '';
@@ -1775,6 +1804,8 @@ function stopRec() {
 function submitMeeting() {
   const title = document.getElementById('meeting-title').value.trim();
   if (!title) { toast('회의 제목을 입력해주세요.', 'err'); return; }
+  const attendees = document.getElementById('meeting-attendees').value.trim();
+  if (!attendees) { toast('참석자를 입력해주세요.', 'err'); return; }
   if (!_selectedFile) { toast('음성 파일이 없습니다.', 'err'); return; }
 
   const fd = new FormData();
@@ -1784,8 +1815,7 @@ function submitMeeting() {
   fd.append('location', document.getElementById('meeting-location').value);
   fd.append('attendees', document.getElementById('meeting-attendees').value);
   fd.append('agenda', document.getElementById('meeting-agenda').value);
-  fd.append('notes', document.getElementById('meeting-notes').value);
-  fd.append('language', document.getElementById('meeting-language').value);
+  fd.append('notes', '');
 
   const btn = document.getElementById('submit-btn');
   btn.disabled = true;
@@ -2370,9 +2400,11 @@ function toast(msg, type = 'info') {
 function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('meeting-date').value = new Date().toISOString().slice(0,10);
-  if (_token) afterLogin().catch(doLogout);
+  // Try to restore session from HttpOnly refresh token cookie (silent login)
+  const refreshed = await tryRefreshToken();
+  if (refreshed) afterLogin().catch(doLogout);
 });
 </script>
 </body>

@@ -12,8 +12,10 @@ class Settings(BaseSettings):
 
     # Security
     SECRET_KEY: str = "insecure-default-change-me"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     ALGORITHM: str = "HS256"
+    COOKIE_SECURE: bool = False  # True in production (HTTPS)
 
     # File storage
     UPLOAD_DIR: str = "/app/data/uploads"
