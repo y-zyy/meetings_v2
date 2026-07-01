@@ -18,6 +18,31 @@ Action Item도 함께 상세하게 요약해줘.
 |------|-----|-----|-----|
 """
 
+SECOND_PASS_PROMPT_TEMPLATE = """\
+아래는 회의록 초본과 원본 스크립트입니다.
+초본을 기준으로 더욱 상세하고 완성도 높은 최종 회의록을 작성해줘.
+
+[원본 스크립트]
+{transcript}
+
+[회의록 초본]
+{first_draft}
+
+다음 지침에 따라 초본을 개선해줘.
+
+1. 주요 내용 상세화
+- 초본의 요약 내용을 바탕으로, 스크립트에서 누락된 세부 논의 사항, 발언 맥락, 결정 근거 등을 보완해줘.
+- 단순 나열이 아닌, 논의 흐름이 자연스럽게 이어지도록 작성해줘.
+
+2. Action Item 보완
+- 초본의 Action Item 표를 검토하여, 스크립트에서 추가로 확인되는 항목을 보완해줘.
+- 담당자, 일정, 비고가 누락된 경우 스크립트에서 근거를 찾아 채워줘.
+- 기존 항목도 더 구체적인 내용으로 보완해줘.
+
+|Action Item|담당자|일정|비고|
+|------|-----|-----|-----|
+"""
+
 
 def generate_minutes(
     title: str,
@@ -33,16 +58,21 @@ def generate_minutes(
         "LLM_API_BASE_URL", "LLM_API_KEY", "LLM_MODEL", "LLM_TIMEOUT", "LLM_MAX_TOKENS",
     )}
 
-    prompt = USER_PROMPT_TEMPLATE.format(
+    first_prompt = USER_PROMPT_TEMPLATE.format(
         title=title,
         attendees=attendees,
         agenda=agenda,
         transcript=transcript,
     )
+    first_draft = _call_openai(first_prompt, cfg)
 
-    raw = _call_openai(prompt, cfg)
+    second_prompt = SECOND_PASS_PROMPT_TEMPLATE.format(
+        transcript=transcript,
+        first_draft=first_draft,
+    )
+    final = _call_openai(second_prompt, cfg)
 
-    return {"summary": raw, "decisions": [], "action_items": []}
+    return {"summary": final, "decisions": [], "action_items": []}
 
 
 def _call_openai(prompt: str, cfg: dict) -> str:
