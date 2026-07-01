@@ -33,7 +33,12 @@ def generate_minutes(
         "LLM_API_BASE_URL", "LLM_API_KEY", "LLM_MODEL", "LLM_TIMEOUT", "LLM_MAX_TOKENS",
     )}
 
-    prompt = USER_PROMPT_TEMPLATE.format(transcript=transcript)
+    prompt = USER_PROMPT_TEMPLATE.format(
+        title=title,
+        attendees=attendees,
+        agenda=agenda,
+        transcript=transcript,
+    )
 
     raw = _call_openai(prompt, cfg)
 
