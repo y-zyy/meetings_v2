@@ -151,14 +151,14 @@ var marked = (function() {
   --red:#ef4444;--red-d:#fef2f2;
   --amber:#f59e0b;--amber-d:#fffbeb;
   --green:#22c55e;
-  --sidebar-w:120px;
+  --sidebar-w:160px;
   --font:'Noto Sans KR','Apple SD Gothic Neo','AppleGothic','나눔고딕','NanumGothic','돋움','Dotum',sans-serif;
   --mono:'Courier New','D2Coding',monospace;
   --r:10px;--rs:6px;
   --shadow:0 1px 3px rgba(0,0,0,.06);
   --shadow-md:0 4px 16px rgba(0,0,0,.10);
 }
-body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px;display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .layout-body{display:flex;flex:1;overflow:hidden;height:calc(100vh - 110px);}
 button{font-family:var(--font);cursor:pointer;}
 input,select,textarea{font-family:var(--font);}
@@ -175,6 +175,7 @@ input,select,textarea{font-family:var(--font);}
 .login-box{width:100%;max-width:420px;}
 .login-logo{font-size:26px;font-weight:800;letter-spacing:2px;font-family:'Arial Black','Arial',sans-serif;text-transform:uppercase;margin-bottom:4px;}
 .login-sub{font-size:10px;font-weight:600;letter-spacing:2.5px;color:#1B1464;margin-bottom:32px;font-family:Arial,sans-serif;text-transform:uppercase;}
+.login-title-main{font-size:17px;letter-spacing:.2px;font-family:var(--font);text-transform:none;font-weight:700;margin-top:6px;}
 .login-err{font-size:12px;color:var(--red);margin-bottom:10px;min-height:18px;}
 .login-ok{font-size:12px;color:#16a34a;margin-bottom:10px;min-height:18px;}
 .login-tab{display:flex;gap:0;margin-bottom:24px;border-bottom:2px solid #e5e7eb;}
@@ -193,8 +194,8 @@ input,select,textarea{font-family:var(--font);}
 .sb-item{width:calc(100% - 16px);margin:0 8px;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;padding:9px 12px;border-radius:var(--rs);cursor:pointer;border:none;background:none;transition:background .12s;color:rgba(255,255,255,.5);}
 .sb-item:hover{background:rgba(255,255,255,.12);color:rgba(255,255,255,.85);}
 .sb-item.active{background:rgba(255,255,255,.2);color:#fff;}
-.sb-item svg{width:18px;height:18px;flex-shrink:0;}
-.sb-item span{font-size:12px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;}
+.sb-item svg{width:20px;height:20px;flex-shrink:0;}
+.sb-item span{font-size:14px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;}
 .sb-spacer{flex:1;}
 .sb-bottom{display:flex;flex-direction:column;align-items:stretch;gap:4px;}
 
@@ -215,15 +216,15 @@ input,select,textarea{font-family:var(--font);}
 .list-tab+.list-tab{margin-left:20px;}
 .meeting-table-wrap{flex:1;overflow-y:auto;padding:0 28px 24px;}
 .meeting-table{width:100%;border-collapse:collapse;margin-top:4px;}
-.meeting-table th{text-align:left;padding:9px 12px;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;}
-.meeting-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text2);vertical-align:middle;}
+.meeting-table th{text-align:left;padding:9px 12px;font-size:12px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;}
+.meeting-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:14px;color:var(--text2);vertical-align:middle;}
 .meeting-table tr:last-child td{border-bottom:none;}
 .meeting-table tbody tr{transition:background .08s;cursor:pointer;}
 .meeting-table tbody tr:hover td{background:var(--bg2);}
 td.col-name{color:var(--text);font-weight:400;width:100%;}
 td.col-dur{font-variant-numeric:tabular-nums;white-space:nowrap;width:1%;}
 td.col-date{color:var(--text3);white-space:nowrap;width:1%;}
-.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap;}
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;}
 .b-done{background:var(--accent-d);color:var(--accent2);}
 .b-proc{background:#fffbeb;color:#b45309;}
 .b-fail{background:var(--red-d);color:var(--red);}
@@ -260,18 +261,18 @@ td.col-date{color:var(--text3);white-space:nowrap;width:1%;}
 .w-bar:nth-child(10){animation-delay:.24s}.w-bar:nth-child(11){animation-delay:.16s}.w-bar:nth-child(12){animation-delay:.08s}
 @keyframes wv{0%,100%{height:4px}50%{height:32px}}
 .field{display:flex;flex-direction:column;gap:5px;margin-bottom:10px;}
-.field-label{font-size:11px;font-weight:600;color:var(--text2);}
-.input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);padding:8px 12px;font-size:13px;outline:none;transition:border .15s;font-family:var(--font);}
+.field-label{font-size:12px;font-weight:600;color:var(--text2);}
+.input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);padding:8px 12px;font-size:14px;outline:none;transition:border .15s;font-family:var(--font);}
 .input:focus{border-color:var(--accent);background:var(--bg);box-shadow:0 0 0 3px var(--accent-d);}
 .input::placeholder{color:var(--text3);}
 textarea.input{resize:vertical;min-height:80px;line-height:1.6;}
 select.input{appearance:none;cursor:pointer;}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--rs);font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:var(--font);}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--rs);font-size:14px;font-weight:600;border:none;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:var(--font);}
 .btn-primary{background:var(--accent);color:#fff;}
 .btn-primary:hover{background:var(--accent2);}
 .btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2);}
 .btn-ghost:hover{background:var(--bg3);color:var(--text);}
-.btn-sm{padding:5px 12px;font-size:12px;}
+.btn-sm{padding:5px 12px;font-size:13px;}
 .btn:disabled{opacity:.5;cursor:not-allowed;}
 
 /* UPLOAD PROGRESS */
@@ -358,7 +359,7 @@ select.input{appearance:none;cursor:pointer;}
 
 /* PAGINATION */
 .pagination{display:flex;justify-content:center;gap:4px;padding:12px 0;}
-.pg-btn{width:30px;height:30px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--bg);color:var(--text2);cursor:pointer;transition:all .12s;}
+.pg-btn{width:30px;height:30px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;border:1px solid var(--border);background:var(--bg);color:var(--text2);cursor:pointer;transition:all .12s;}
 .pg-btn:hover{border-color:var(--accent);color:var(--accent);}
 .pg-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
 .mt12{margin-top:12px}.mb12{margin-bottom:12px}.mb16{margin-bottom:16px}.mb20{margin-bottom:20px}
@@ -422,7 +423,7 @@ select.input{appearance:none;cursor:pointer;}
   <div class="login-box">
     <div class="login-logo"><span style="color:#1B1464;">KA</span><span style="color:#8a8a8a;">I</span><span style="color:#1B1464;"> MEET</span><span style="color:#8a8a8a;">I</span><span style="color:#1B1464;">NGS</span></div>
     <div class="login-sub">Korea Aerospace Industries, Ltd.</div>
-    <div class="login-sub">사내 회의록 작성 AI 서비스</div>
+    <div class="login-sub login-title-main">사내 회의록 작성 AI 서비스</div>
 
     <!-- 탭 -->
     <div class="login-tab">
@@ -441,7 +442,7 @@ select.input{appearance:none;cursor:pointer;}
     <!-- 회원가입 폼 -->
     <div id="register-form-wrap" style="display:none;">
       <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:12px;color:#1d4ed8;line-height:1.5;">
-        ⚠ 아이디는 <b>@mygroup.com</b> 이메일만 사용 가능합니다.<br>
+        ⚠ 아이디는 <b>사번</b>을 입력해주세요.<br>
         가입 후 바로 로그인할 수 있습니다.
       </div>
 
@@ -449,10 +450,7 @@ select.input{appearance:none;cursor:pointer;}
         <div class="field-label">아이디 <span style="color:#6b7280;font-weight:400;">(사번)</span></div>
         <div style="display:flex;align-items:flex-start;gap:6px;">
           <div style="flex:1;">
-            <div class="email-input-wrap">
-              <input class="input" id="reg-username" placeholder="예: hong.gildong" autocomplete="off" oninput="resetUsernameCheck()">
-              <span class="email-suffix">@mygroup.com</span>
-            </div>
+            <input class="input" id="reg-username" placeholder="사번을 입력하세요" autocomplete="off" oninput="resetUsernameCheck()">
             <div id="reg-username-msg" style="font-size:11px;margin-top:3px;min-height:14px;"></div>
           </div>
           <button class="btn btn-ghost btn-sm check-btn" onclick="checkUsername()" style="margin-top:1px;">중복 확인</button>
@@ -496,7 +494,7 @@ select.input{appearance:none;cursor:pointer;}
     <div style="font-size:11px;font-weight:600;letter-spacing:2.5px;color:#1B1464;font-family:'Arial',sans-serif;text-transform:uppercase;white-space:nowrap;">KOREA AEROSPACE INDUSTRIES, LTD.</div>
   </div>
   <div style="flex:1;"></div>
-  <div style="font-size:12px;color:var(--text2);" id="topbar-user"></div>
+  <div style="font-size:14px;color:var(--text2);" id="topbar-user"></div>
   <button class="btn btn-ghost btn-sm" onclick="doLogout()">로그아웃</button>
 </header>
 
@@ -530,8 +528,8 @@ select.input{appearance:none;cursor:pointer;}
       <span>관리자</span><span id="sb-admin-badge" class="admin-badge" style="display:none;"></span>
     </button>
     <div style="width:calc(100% - 16px);margin:6px 8px 0;background:rgba(255,255,255,.15);border-radius:8px;padding:8px 12px;" id="sb-user-card">
-      <div style="font-size:11px;font-weight:700;color:#fff;" id="sb-fullname">-</div>
-      <div style="font-size:9px;color:rgba(255,255,255,.5);" id="sb-role">-</div>
+      <div style="font-size:13px;font-weight:700;color:#fff;" id="sb-fullname">-</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.5);" id="sb-role">-</div>
     </div>
   </div>
 </aside>
@@ -550,7 +548,7 @@ select.input{appearance:none;cursor:pointer;}
           <button id="bulk-delete-btn" class="btn btn-sm" style="display:none;background:#fef2f2;color:#ef4444;border:1px solid #fecaca;" onclick="bulkDelete()">선택 삭제 (<span id="bulk-delete-count">0</span>건)</button>
           <div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:7px 14px;">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" width="14" height="14"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg>
-            <input placeholder="검색어를 입력해 주세요" id="search-input" oninput="scheduleSearch()" style="border:none;background:none;outline:none;font-size:13px;color:var(--text);width:200px;font-family:var(--font);">
+            <input placeholder="검색어를 입력해 주세요" id="search-input" oninput="scheduleSearch()" style="border:none;background:none;outline:none;font-size:14px;color:var(--text);width:200px;font-family:var(--font);">
           </div>
         </div>
       </div>
@@ -558,9 +556,9 @@ select.input{appearance:none;cursor:pointer;}
         <table class="meeting-table" id="list-table">
           <thead><tr>
             <th style="width:40px;padding-left:12px;"><input type="checkbox" id="select-all-cb" onclick="toggleSelectAll(this)" style="cursor:pointer;width:15px;height:15px;"></th>
+            <th style="width:150px;white-space:nowrap;">일시</th>
+            <th style="width:280px;">참석자</th>
             <th class="col-name">회의 이름</th>
-            <th style="width:100px;white-space:nowrap;">일시</th>
-            <th style="width:160px;">참석자</th>
             <th style="width:80px">상태</th>
             <th style="width:72px;white-space:nowrap;">내보내기</th>
             <th style="width:60px"></th>
@@ -1550,8 +1548,8 @@ function fmtDateOnly(iso) {
 function fmtAttendees(str) {
   if (!str) return '-';
   const names = str.split(',').map(s => s.trim()).filter(Boolean);
-  if (names.length <= 2) return esc(names.join(', '));
-  return esc(names.slice(0, 2).join(', ')) + ` <span style="color:var(--text3)">외 ${names.length - 2}명</span>`;
+  if (names.length <= 5) return esc(names.join(', '));
+  return esc(names.slice(0, 5).join(', ')) + ` <span style="color:var(--text3)">외 ${names.length - 5}명</span>`;
 }
 
 function renderList(data) {
@@ -1573,9 +1571,9 @@ function renderList(data) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="width:40px;padding-left:12px;"><input type="checkbox" class="row-cb" value="${m.id}" onclick="event.stopPropagation();onRowCheck(this)" style="cursor:pointer;width:15px;height:15px;"></td>
+      <td style="white-space:nowrap;color:var(--text2);font-size:13px;">${fmtDateOnly(m.meeting_date)}</td>
+      <td style="font-size:13px;color:var(--text2);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fmtAttendees(m.attendees)}</td>
       <td class="col-name">${esc(m.title)}</td>
-      <td style="white-space:nowrap;color:var(--text2);font-size:12px;">${fmtDateOnly(m.meeting_date)}</td>
-      <td style="font-size:12px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fmtAttendees(m.attendees)}</td>
       <td><span class="badge ${cls}">${label}</span></td>
       <td>${exportBtn}</td>
       <td style="width:60px;"><button class="btn btn-sm" style="background:#fef2f2;color:#ef4444;border:1px solid #fecaca;padding:3px 8px;font-size:11px;" onclick="event.stopPropagation();deleteMeeting(${m.id})">삭제</button></td>`;
