@@ -56,6 +56,7 @@ def process_meeting(self, meeting_id: int):
             from app.models.glossary import AdminCorrectionRule, AdminGlossaryTerm, UserGlossaryTerm
             from app.services import asr_postprocess
             from app.services.asr_postprocess_rule import apply_rule_based_correction
+            from app.services.sentence_split import split_into_lines
             from sqlalchemy import select as sa_select
 
             # ── Step 1.5a: Rule-based 교정 (Aho-Corasick) ────────────────
@@ -95,6 +96,10 @@ def process_meeting(self, meeting_id: int):
                 user_terms=user_terms,
                 effective=effective,
             )
+
+            # ── Step 1.5c: 문장 단위 줄바꿈 포맷팅 (Kiwi) ────────────────
+            transcript = split_into_lines(transcript)
+
             meeting.transcript = transcript
             session.commit()
             logger.info("[%s] STT 후처리 완료 (%d chars)", meeting_id, len(transcript))
