@@ -152,6 +152,19 @@ class GlossaryIndex:
         return idx
 
 
+def load_seed_pairs(path: str) -> list[tuple[str, str]]:
+    """시드 JSON 파일에서 (wrong, correct) 쌍을 로드. 파일마다 매번 새로 읽으므로
+    파일 수정 시 재배포/재시작 없이 다음 호출부터 바로 반영된다."""
+    p = Path(path)
+    if not p.exists():
+        return []
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return []
+    return [(d["wrong"], d["correct"]) for d in data if d.get("wrong") and d.get("correct")]
+
+
 # ── 문장/문단 처리 ──────────────────────────────────────────────────────────────
 
 import re  # noqa: E402

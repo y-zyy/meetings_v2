@@ -55,20 +55,26 @@ def process_meeting(self, meeting_id: int):
 
             from app.models.glossary import AdminCorrectionRule, AdminGlossaryTerm, UserGlossaryTerm
             from app.services import asr_postprocess
-            from app.services.asr_postprocess_rule import apply_rule_based_correction
+            from app.services.asr_postprocess_rule import apply_rule_based_correction, load_seed_pairs
             from app.services.sentence_split import split_into_lines
             from sqlalchemy import select as sa_select
 
             # ── Step 1.5a: Rule-based 교정 (Aho-Corasick) ────────────────
+            # 시드 파일(대량 사전) + DB(관리자 UI 개별 등록) 병합, 동일 wrong은 DB가 우선
+            seed_pairs = load_seed_pairs(settings.CORRECTION_RULES_SEED_PATH)
             correction_rules = session.execute(
                 sa_select(AdminCorrectionRule).order_by(AdminCorrectionRule.created_at)
             ).scalars().all()
-            rule_pairs = [(r.wrong, r.correct) for r in correction_rules]
+            db_pairs = [(r.wrong, r.correct) for r in correction_rules]
+            rule_pairs = list({**dict(seed_pairs), **dict(db_pairs)}.items())
             if rule_pairs:
                 transcript = apply_rule_based_correction(transcript, rule_pairs)
                 meeting.transcript = transcript
                 session.commit()
-                logger.info("[%s] Rule-based 교정 완료 (%d 규칙)", meeting_id, len(rule_pairs))
+                logger.info(
+                    "[%s] Rule-based 교정 완료 (시드 %d + DB %d = 총 %d 규칙)",
+                    meeting_id, len(seed_pairs), len(db_pairs), len(rule_pairs),
+                )
 
             # ── Step 1.5b: LLM 기반 STT 후처리 ──────────────────────────
             admin_terms = [
