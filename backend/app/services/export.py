@@ -4,6 +4,7 @@ import html as _html
 import io
 import re
 from datetime import date
+from pathlib import Path
 
 from docx import Document
 from docx.shared import RGBColor
@@ -19,14 +20,19 @@ from reportlab.platypus import (
     TableStyle,
 )
 from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+from reportlab.pdfbase.ttfonts import TTFont
 
-# Register built-in ReportLab CID fonts for Korean
-pdfmetrics.registerFont(UnicodeCIDFont('HYGothic-Medium'))
-pdfmetrics.registerFont(UnicodeCIDFont('HYSMyeongJo-Medium'))
+# Register Noto Sans KR as the default PDF font
+_FONT_DIR = Path(__file__).resolve().parent.parent / "assets" / "fonts"
 
-_KO_FONT = 'HYGothic-Medium'
-_KO_FONT_BOLD = 'HYSMyeongJo-Medium'
+_KO_FONT = "Noto Sans KR"
+_KO_FONT_BOLD = "Noto Sans KR Bold"
+
+pdfmetrics.registerFont(TTFont(_KO_FONT, str(_FONT_DIR / "NotoSansKR-Regular.ttf")))
+pdfmetrics.registerFont(TTFont(_KO_FONT_BOLD, str(_FONT_DIR / "NotoSansKR-Bold.ttf")))
+pdfmetrics.registerFontFamily(
+    _KO_FONT, normal=_KO_FONT, bold=_KO_FONT_BOLD, italic=_KO_FONT, boldItalic=_KO_FONT_BOLD
+)
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
