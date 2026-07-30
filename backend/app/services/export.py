@@ -2,11 +2,14 @@
 
 import html as _html
 import io
+import os
 import re
 from datetime import date
 
 from docx import Document
-from docx.shared import RGBColor
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
+from docx.shared import RGBColor, Pt
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -19,14 +22,38 @@ from reportlab.platypus import (
     TableStyle,
 )
 from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+from reportlab.pdfbase.ttfonts import TTFont
 
-# Register built-in ReportLab CID fonts for Korean
-pdfmetrics.registerFont(UnicodeCIDFont('HYGothic-Medium'))
-pdfmetrics.registerFont(UnicodeCIDFont('HYSMyeongJo-Medium'))
+# ── Font setup ───────────────────────────────────────────────────────────────
+# Noto Sans KR must be embedded as real TTF files (ReportLab has no built-in
+# CID font for it — that's only true of things like HYGothic/HYSMyeongJo).
+# Put the .ttf files next to this script in a "fonts/" folder, e.g.:
+#   fonts/NotoSansKR-Regular.ttf
+#   fonts/NotoSansKR-Bold.ttf
+# You can get these from Google Fonts: https://fonts.google.com/noto/specimen/Noto+Sans+KR
 
-_KO_FONT = 'HYGothic-Medium'
-_KO_FONT_BOLD = 'HYSMyeongJo-Medium'
+_FONT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
+
+_KO_FONT = "NotoSansKR"
+_KO_FONT_BOLD = "NotoSansKR-Bold"
+
+pdfmetrics.registerFont(TTFont(_KO_FONT, os.path.join(_FONT_DIR, "NotoSansKR-Regular.ttf")))
+pdfmetrics.registerFont(TTFont(_KO_FONT_BOLD, os.path.join(_FONT_DIR, "NotoSansKR-Bold.ttf")))
+# Noto Sans KR has no dedicated italic cut, so map italic/bold-italic to the
+# closest available weights rather than leaving them unregistered (which
+# would make <b>/<i> tags silently fall back to Helvetica).
+pdfmetrics.registerFontFamily(
+    _KO_FONT,
+    normal=_KO_FONT,
+    bold=_KO_FONT_BOLD,
+    italic=_KO_FONT,
+    boldItalic=_KO_FONT_BOLD,
+)
+
+# DOCX-side font name (this is just a name Word resolves at render time —
+# no embedding happens here unless you also embed the font in the .docx,
+# so the font should be installed on whatever machine opens the file).
+_DOCX_FONT = "Noto Sans KR"
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -179,6 +206,43 @@ def _parse_markdown(src: str) -> list[dict]:
 
 # ── DOCX ─────────────────────────────────────────────────────────────────────
 
+def _docx_set_style_font(doc, font_name: str = _DOCX_FONT):
+    """Set the Latin + East-Asian font on the styles used throughout the doc.
+
+    Setting run.font.name alone is not enough for Korean text in Word —
+    Word keeps a separate 'East Asian' font slot (w:rFonts/@w:eastAsia) and
+    will silently substitute a different font for CJK glyphs unless that
+    slot is also set. Patching this at the style level covers every
+    paragraph/run created via add_heading/add_paragraph without having to
+    touch each individual run.
+    """
+    style_sizes = {
+        "Normal": 9,
+        "Heading 1": 9,
+        "Heading 2": 9,
+        "Heading 3": 9,
+        "Heading 4": 9,
+        "List Bullet": 9,
+        "List Number": 9,
+    }
+    for name, size in style_sizes.items():
+        try:
+            style = doc.styles[name]
+        except KeyError:
+            continue
+        style.font.name = font_name
+        style.font.size = Pt(size)
+        style.font.color.rgb = RGBColor(0x00, 0x00, 0x00)  ### djlee ### font color change
+        rpr = style.element.get_or_add_rPr()
+        rFonts = rpr.find(qn('w:rFonts'))
+        if rFonts is None:
+            rFonts = OxmlElement('w:rFonts')
+            rpr.append(rFonts)
+        rFonts.set(qn('w:eastAsia'), font_name)
+        rFonts.set(qn('w:ascii'), font_name)
+        rFonts.set(qn('w:hAnsi'), font_name)
+
+
 def _docx_add_inline(para, text: str):
     """Add text with bold/italic markdown markup to a docx paragraph."""
     # Split on **bold**, *italic*, ***bold-italic***
@@ -251,7 +315,10 @@ def _docx_add_markdown(doc, md_text: str):
 
 def build_docx(meeting) -> bytes:
     doc = Document()
-
+    _docx_set_style_font(doc)
+    
+    ### djlee ### 불필요한 내용 삭
+    """
     # Title
     title_p = doc.add_heading(meeting.title, level=1)
     title_p.runs[0].font.color.rgb = RGBColor(0x1B, 0x14, 0x64)
@@ -272,6 +339,7 @@ def build_docx(meeting) -> bytes:
 
     # Summary — render markdown
     doc.add_heading("주요 내용 요약", level=2)
+    """
     _docx_add_markdown(doc, meeting.summary)
 
     buf = io.BytesIO()
