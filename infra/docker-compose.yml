@@ -79,6 +79,7 @@ services:
         condition: service_healthy
     volumes:
       - ../data/uploads:/app/data/uploads   # 호스트 경로에 직접 저장
+      - ../backend/data/correction_rules_seed.json:/app/data/correction_rules_seed.json:ro
     networks:
       - internal
 

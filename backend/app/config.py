@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "/app/data/uploads"
     MAX_UPLOAD_SIZE_MB: int = 500
 
+    # Rule-based STT 교정 시드 사전 (파일 수정 시 재시작 없이 다음 회의 처리부터 반영)
+    CORRECTION_RULES_SEED_PATH: str = "/app/data/correction_rules_seed.json"
+
     # ASR
     ASR_API_URL: str = "http://asr-server:9000/transcribe"
     ASR_API_KEY: str = ""
