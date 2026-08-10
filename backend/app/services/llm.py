@@ -84,7 +84,9 @@ def _call_openai(prompt: str, cfg: dict, log_prefix: str = "LLM") -> str:
     timeout = int(cfg.get("LLM_TIMEOUT") or settings.LLM_TIMEOUT)
     max_tokens = int(cfg.get("LLM_MAX_TOKENS") or settings.LLM_MAX_TOKENS)
     repeat_max = int(cfg.get("LLM_REPEAT_MAX") or settings.LLM_REPEAT_MAX)
+    ngram_max_chars = int(cfg.get("LLM_REPEAT_NGRAM_MAX_CHARS") or settings.LLM_REPEAT_NGRAM_MAX_CHARS)
     max_retries = int(cfg.get("LLM_STREAM_MAX_RETRIES") or settings.LLM_STREAM_MAX_RETRIES)
+    repetition_penalty = float(cfg.get("LLM_REPETITION_PENALTY") or settings.LLM_REPETITION_PENALTY)
 
     return stream_chat_completion(
         base_url=base_url,
@@ -97,6 +99,8 @@ def _call_openai(prompt: str, cfg: dict, log_prefix: str = "LLM") -> str:
         ],
         temperature=0.9,  # follows the default settings
         repeat_max=repeat_max,
+        ngram_max_chars=ngram_max_chars,
         max_retries=max_retries,
+        repetition_penalty=repetition_penalty,
         log_prefix=log_prefix,
     )
