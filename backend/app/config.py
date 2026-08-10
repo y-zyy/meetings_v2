@@ -38,6 +38,12 @@ class Settings(BaseSettings):
     LLM_TIMEOUT: int = 120
     LLM_MAX_TOKENS: int = 4096
 
+    # LLM 스트리밍 반복(hallucination) 가드
+    # 동일한 토큰이 연속으로 몇 번까지 나오면 정상으로 볼지 (초과 시 반복으로 간주)
+    LLM_REPEAT_MAX: int = 8
+    # 반복이 감지됐을 때 재생성을 몇 번까지 시도할지
+    LLM_STREAM_MAX_RETRIES: int = 2
+
     # Cloud inference keys (if set, take priority over local servers)
     OPENAI_API_KEY: str = ""           # Whisper ASR via OpenAI
     ANTHROPIC_API_KEY: str = ""        # Meeting-minutes LLM via Claude
