@@ -1,6 +1,8 @@
 """Celery tasks for ASR + LLM processing pipeline."""
 
 import logging
+import os
+from datetime import datetime, timezone
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -19,6 +21,34 @@ SyncSession = sessionmaker(bind=_engine)
 def _get_meeting(session: Session, meeting_id: int):
     from app.models.meeting import Meeting
     return session.get(Meeting, meeting_id)
+
+
+def _save_markdown_snapshot(meeting, suffix: str, heading: str, body: str) -> None:
+    """오디오 파일과 같은 디렉터리에 처리 단계별 결과를 markdown 파일로 저장.
+
+    파일명: {uid}_{suffix}.md (uid는 오디오 파일명에서 확장자를 뗀 부분)
+    저장 실패는 전체 파이프라인을 막지 않도록 로그만 남기고 무시한다.
+    """
+    if not meeting.file_path:
+        return
+    try:
+        dest_dir = os.path.dirname(meeting.file_path)
+        uid, _ = os.path.splitext(os.path.basename(meeting.file_path))
+        md_path = os.path.join(dest_dir, f"{uid}_{suffix}.md")
+
+        generated_at = datetime.now(timezone.utc).isoformat()
+        header = (
+            f"# {heading}\n\n"
+            f"- 회의: {meeting.title}\n"
+            f"- 회의 ID: {meeting.id}\n"
+            f"- 생성 일시(UTC): {generated_at}\n\n"
+            "---\n\n"
+        )
+        with open(md_path, "w", encoding="utf-8") as f:
+            f.write(header + (body or ""))
+        logger.info("[%s] markdown 저장 완료: %s", meeting.id, md_path)
+    except Exception:
+        logger.exception("[%s] markdown 저장 실패 (suffix=%s)", meeting.id, suffix)
 
 
 @celery_app.task(bind=True, name="process_meeting", max_retries=2)
@@ -47,6 +77,7 @@ def process_meeting(self, meeting_id: int):
             meeting.transcript = transcript
             session.commit()
             logger.info("[%s] ASR 완료 (%d chars)", meeting_id, len(transcript))
+            _save_markdown_snapshot(meeting, "01_asr", "음성인식 결과 (ASR)", transcript)
 
             # ── Step 1.5: STT 후처리 ──────────────────────────────────────
             meeting.status = "stt_postprocessing"
@@ -109,6 +140,7 @@ def process_meeting(self, meeting_id: int):
             meeting.transcript = transcript
             session.commit()
             logger.info("[%s] STT 후처리 완료 (%d chars)", meeting_id, len(transcript))
+            _save_markdown_snapshot(meeting, "02_asr_postprocessed", "음성인식 후처리 결과", transcript)
 
             # ── Step 2: LLM ───────────────────────────────────────────────
             meeting.status = "llm_processing"
@@ -142,6 +174,8 @@ def process_meeting(self, meeting_id: int):
                     status="pending",
                     order=i,
                 ))
+
+            _save_markdown_snapshot(meeting, "03_summary", "LLM 요약 결과", meeting.summary)
 
             meeting.status = "done"
             session.commit()
