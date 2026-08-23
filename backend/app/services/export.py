@@ -351,6 +351,13 @@ def build_docx(meeting) -> bytes:
 
 _ACCENT = colors.HexColor("#1B1464")
 
+# Table styling — mirrors how Claude renders markdown tables in chat:
+# a light gray header row with dark text, thin light borders, no stripes.
+_TABLE_HEADER_BG = colors.HexColor("#F1F1F0")
+_TABLE_HEADER_TEXT = colors.HexColor("#1F1E1D")
+_TABLE_BORDER = colors.HexColor("#E0E0E0")
+_TABLE_ROW_BG = colors.white
+
 _PDF_PAGE_WIDTH = A4[0] - 4 * cm  # usable width (left+right margin = 4cm)
 
 
@@ -371,13 +378,13 @@ def _pdf_add_markdown(story: list, md_text: str, body_style, h2_style, font, fon
     )
 
     tbl_header_style = TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), _ACCENT),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("BACKGROUND", (0, 0), (-1, 0), _TABLE_HEADER_BG),
+        ("TEXTCOLOR", (0, 0), (-1, 0), _TABLE_HEADER_TEXT),
         ("FONTNAME", (0, 0), (-1, 0), font_bold),
         ("FONTNAME", (0, 1), (-1, -1), font),
         ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#d2d5da")),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#fafafa")]),
+        ("GRID", (0, 0), (-1, -1), 0.5, _TABLE_BORDER),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [_TABLE_ROW_BG]),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("LEFTPADDING", (0, 0), (-1, -1), 6),
         ("TOPPADDING", (0, 0), (-1, -1), 4),
