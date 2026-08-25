@@ -35,3 +35,7 @@ htmlcov/
 
 # pytest
 .pytest_cache/
+
+# TLS certs (자체 서명 인증서 등, infra/nginx/gen-selfsigned-cert.sh 로 생성)
+infra/nginx/certs/*
+!infra/nginx/certs/.gitkeep
