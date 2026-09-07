@@ -1,5 +1,55 @@
 # meetings_v2
 
+## 실행 / 업데이트 (Docker Compose)
+
+### 최초 실행
+
+```bash
+cd infra
+docker compose up -d --build
+```
+
+### 코드를 새로 받은 뒤 (브랜치 전환, `git pull` 등)
+
+`backend/Dockerfile`은 애플리케이션 코드를 `COPY . .`로 이미지 안에 박아넣기
+때문에, 코드가 바뀌면(의존성 변경 여부와 무관하게) 이미지를 다시 빌드해야
+컨테이너에 반영됩니다.
+
+```bash
+cd infra
+git pull                      # 또는 원하는 브랜치로 checkout
+docker compose up -d --build
+```
+
+- `--build`는 변경된 레이어만 다시 빌드하고, 새 이미지로 컨테이너를 재생성합니다.
+- **개발 환경**(`docker-compose.override.yml`이 같이 적용되는 경우)은 `backend/`
+  디렉터리를 컨테이너에 통째로 bind mount하므로, `api`/`worker-*` 컨테이너의 코드
+  변경은 재빌드 없이 자동 반영됩니다 (`uvicorn --reload`, `watchmedo auto-restart`).
+  이 경우엔 `--build` 없이 `docker compose up -d`만 해도 됩니다. 단
+  `requirements.txt` 등 의존성이 바뀔 때는 개발 환경에서도 `--build`가 필요합니다.
+
+### Celery 워커 서비스 분리 (`worker` → `worker-asr` / `worker-llm`)
+
+ASR과 LLM 처리를 별도 Celery 큐/워커로 분리하면서, 기존 `worker` 서비스 하나가
+`worker-asr`(ASR 전용, concurrency=4)와 `worker-llm`(LLM 전용, concurrency=12)
+두 개로 나뉘었습니다. 이전에 떠 있던 `worker` 컨테이너는 새 compose 파일에 더
+이상 정의돼 있지 않아 고아 컨테이너로 남으므로, 업데이트 시 `--remove-orphans`를
+붙여서 정리하세요.
+
+```bash
+cd infra
+docker compose up -d --build --remove-orphans
+```
+
+정상적으로 반영됐다면 `worker` 컨테이너는 사라지고, `worker-asr`/`worker-llm`
+두 개가 대신 떠 있어야 합니다.
+
+```bash
+docker compose ps
+docker compose logs -f worker-asr
+docker compose logs -f worker-llm
+```
+
 ## HTTPS 설정 (사내망, 자체 서명 인증서)
 
 마이크 녹음(`getUserMedia`)은 브라우저 보안 컨텍스트(HTTPS 또는 `localhost`)에서만
