@@ -60,8 +60,9 @@ services:
       timeout: 5s
       retries: 10
 
-  # ── Celery worker ─────────────────────────────────────────────────────────
-  worker:
+  # ── Celery worker: ASR 큐 ────────────────────────────────────────────────
+  # 음성인식(원격 ASR 서버 호출) 전용. 기존 concurrency=4 그대로 유지.
+  worker-asr:
     build:
       context: ../backend
       dockerfile: Dockerfile
@@ -70,7 +71,36 @@ services:
       celery -A app.workers.celery_app worker
       --loglevel=info
       --concurrency=4
-      --queues=celery
+      --queues=asr
+      --hostname=worker-asr@%h
+    <<: *api-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../data/uploads:/app/data/uploads   # 호스트 경로에 직접 저장
+      - ../backend/data/correction_rules_seed.json:/app/data/correction_rules_seed.json:ro
+    networks:
+      - internal
+
+  # ── Celery worker: LLM 큐 ────────────────────────────────────────────────
+  # STT 후처리 + 회의록 요약(LLM 서버 호출) 전용. 프로세스당 무거운 모델을
+  # 물고 있지 않고 대부분 시간을 네트워크 응답 대기로 보내므로, ASR 큐보다
+  # concurrency를 넉넉히 잡아 동시에 여러 회의의 LLM 요청을 처리한다.
+  # (LLM 서버가 감당 가능한 동시 요청 수에 맞춰 조정할 것.)
+  worker-llm:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: >
+      celery -A app.workers.celery_app worker
+      --loglevel=info
+      --concurrency=12
+      --queues=llm
+      --hostname=worker-llm@%h
     <<: *api-env
     depends_on:
       postgres:

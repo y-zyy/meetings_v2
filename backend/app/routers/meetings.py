@@ -132,9 +132,9 @@ async def upload_meeting(
     await db.commit()
     await db.refresh(meeting)
 
-    # Dispatch Celery task
-    from app.workers.tasks import process_meeting
-    process_meeting.delay(meeting.id)
+    # Dispatch Celery task (ASR queue first; it chains into the LLM queue on completion)
+    from app.workers.tasks import process_meeting_asr
+    process_meeting_asr.delay(meeting.id)
 
     return meeting
 

@@ -7,8 +7,8 @@
 #   docker compose up -d           # 이후에는 build 없이 그냥 up만 하면 됨
 #
 # 이후로는 backend/ 안의 .py 파일을 고치면:
-#   - api    : uvicorn --reload 가 감지해서 자동 재시작
-#   - worker : watchmedo가 감지해서 celery worker 프로세스를 자동 재시작
+#   - api        : uvicorn --reload 가 감지해서 자동 재시작
+#   - worker-asr, worker-llm : watchmedo가 감지해서 celery worker 프로세스를 자동 재시작
 # 컨테이너를 다시 빌드하거나 재시작할 필요가 없음.
 # (requirements.txt 등 의존성을 바꿀 때만 --build 다시 필요)
 
@@ -18,7 +18,7 @@ services:
       - ../backend:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-  worker:
+  worker-asr:
     volumes:
       - ../backend:/app
     command: >
@@ -30,4 +30,20 @@ services:
       celery -A app.workers.celery_app worker
       --loglevel=info
       --concurrency=4
-      --queues=celery
+      --queues=asr
+      --hostname=worker-asr@%h
+
+  worker-llm:
+    volumes:
+      - ../backend:/app
+    command: >
+      watchmedo auto-restart
+      --directory=./app
+      --pattern=*.py
+      --recursive
+      --
+      celery -A app.workers.celery_app worker
+      --loglevel=info
+      --concurrency=12
+      --queues=llm
+      --hostname=worker-llm@%h

@@ -77,7 +77,7 @@ def postprocess_transcript(
 
 def _call_llm(prompt: str, effective: dict | None) -> str:
     from app.config import settings
-    from openai import OpenAI
+    from app.services.llm_client import get_openai_client
 
     cfg = effective or {}
     base_url = cfg.get("LLM_API_BASE_URL") or settings.LLM_API_BASE_URL
@@ -86,7 +86,7 @@ def _call_llm(prompt: str, effective: dict | None) -> str:
     timeout = int(cfg.get("LLM_TIMEOUT") or settings.LLM_TIMEOUT)
     max_tokens = int(cfg.get("LLM_MAX_TOKENS") or settings.LLM_MAX_TOKENS)
 
-    client = OpenAI(base_url=base_url, api_key=api_key, timeout=timeout)
+    client = get_openai_client(base_url, api_key, timeout)
     response = client.chat.completions.create(
         model=model,
         messages=[

@@ -76,14 +76,15 @@ def generate_minutes(
 
 
 def _call_openai(prompt: str, cfg: dict) -> str:
-    from openai import OpenAI
+    from app.services.llm_client import get_openai_client
+
     base_url = cfg.get("LLM_API_BASE_URL") or settings.LLM_API_BASE_URL
     api_key = cfg.get("LLM_API_KEY") or "none"
     model = cfg.get("LLM_MODEL") or settings.LLM_MODEL
     timeout = int(cfg.get("LLM_TIMEOUT") or settings.LLM_TIMEOUT)
     max_tokens = int(cfg.get("LLM_MAX_TOKENS") or settings.LLM_MAX_TOKENS)
 
-    client = OpenAI(base_url=base_url, api_key=api_key, timeout=timeout)
+    client = get_openai_client(base_url, api_key, timeout)
     response = client.chat.completions.create(
         model=model,
         messages=[
