@@ -1,9 +1,10 @@
-"""Celery tasks for ASR + LLM processing pipeline."""
+"""Celery tasks for the staged ASR + LLM processing pipeline."""
 
 import logging
 import os
 from datetime import datetime, timezone
 
+from celery import chain
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -51,47 +52,93 @@ def _save_markdown_snapshot(meeting, suffix: str, heading: str, body: str) -> No
         logger.exception("[%s] markdown 저장 실패 (suffix=%s)", meeting.id, suffix)
 
 
-@celery_app.task(bind=True, name="process_meeting", max_retries=2)
+def _retry_stage(task, session: Session, meeting_id: int, stage: str, exc: Exception):
+    """Retry only the failed stage and expose failure after retries are exhausted."""
+    session.rollback()
+    logger.exception("[%s] %s 단계 실패: %s", meeting_id, stage, exc)
+
+    if task.request.retries >= task.max_retries:
+        try:
+            meeting = _get_meeting(session, meeting_id)
+            if meeting:
+                meeting.status = "failed"
+                meeting.error_message = f"{stage}: {exc}"[:500]
+                session.commit()
+        except Exception:
+            logger.exception("[%s] 실패 상태 저장 실패", meeting_id)
+            session.rollback()
+        raise exc
+
+    countdown = min(60, 10 * (2 ** task.request.retries))
+    raise task.retry(exc=exc, countdown=countdown)
+
+
+@celery_app.task(bind=True, name="process_meeting")
 def process_meeting(self, meeting_id: int):
-    from app.models.user import User  # noqa: F401 — registers User mapper for Meeting.owner relationship
-    from app.models.meeting import ActionItem, Decision, Meeting
-    from app.services import asr, llm
+    """Replace the compatibility entry point with a checkpointed stage chain."""
+    workflow = chain(
+        transcribe_meeting.si(meeting_id),
+        postprocess_meeting.si(meeting_id),
+        generate_minutes_task.si(meeting_id),
+    )
+    return self.replace(workflow)
+
+
+@celery_app.task(bind=True, name="process_meeting.asr", max_retries=2)
+def transcribe_meeting(self, meeting_id: int):
+    from app.models.user import User  # noqa: F401 — registers relationship mapper
+    from app.services import asr
     from app.services.runtime_settings import get_effective_settings_sync
 
     with SyncSession() as session:
         meeting = _get_meeting(session, meeting_id)
         if not meeting:
             logger.error("Meeting %s not found", meeting_id)
-            return
-
-        # Read effective settings (DB overrides > env defaults) once per job
-        effective = get_effective_settings_sync(session)
+            return meeting_id
 
         try:
-            # ── Step 1: ASR ───────────────────────────────────────────────
             meeting.status = "asr_processing"
+            meeting.error_message = None
             session.commit()
             logger.info("[%s] ASR 시작: %s", meeting_id, meeting.file_path)
 
+            effective = get_effective_settings_sync(session)
             transcript = asr.transcribe(meeting.file_path, effective)
             meeting.transcript = transcript
             session.commit()
+
             logger.info("[%s] ASR 완료 (%d chars)", meeting_id, len(transcript))
             _save_markdown_snapshot(meeting, "01_asr", "음성인식 결과 (ASR)", transcript)
+            return meeting_id
+        except Exception as exc:
+            _retry_stage(self, session, meeting_id, "ASR", exc)
 
-            # ── Step 1.5: STT 후처리 ──────────────────────────────────────
+
+@celery_app.task(bind=True, name="process_meeting.postprocess", max_retries=2)
+def postprocess_meeting(self, meeting_id: int):
+    from sqlalchemy import select as sa_select
+
+    from app.models.glossary import AdminCorrectionRule, AdminGlossaryTerm, UserGlossaryTerm
+    from app.models.user import User  # noqa: F401 — registers relationship mapper
+    from app.services import asr_postprocess
+    from app.services.asr_postprocess_rule import apply_rule_based_correction, load_seed_pairs
+    from app.services.runtime_settings import get_effective_settings_sync
+    from app.services.sentence_split import split_into_lines
+
+    with SyncSession() as session:
+        meeting = _get_meeting(session, meeting_id)
+        if not meeting:
+            logger.error("Meeting %s not found", meeting_id)
+            return meeting_id
+
+        try:
             meeting.status = "stt_postprocessing"
             session.commit()
             logger.info("[%s] STT 후처리 시작", meeting_id)
 
-            from app.models.glossary import AdminCorrectionRule, AdminGlossaryTerm, UserGlossaryTerm
-            from app.services import asr_postprocess
-            from app.services.asr_postprocess_rule import apply_rule_based_correction, load_seed_pairs
-            from app.services.sentence_split import split_into_lines
-            from sqlalchemy import select as sa_select
+            effective = get_effective_settings_sync(session)
+            transcript = meeting.transcript or ""
 
-            # ── Step 1.5a: Rule-based 교정 (Aho-Corasick) ────────────────
-            # 시드 파일(대량 사전) + DB(관리자 UI 개별 등록) 병합, 동일 wrong은 DB가 우선
             seed_pairs = load_seed_pairs(settings.CORRECTION_RULES_SEED_PATH)
             correction_rules = session.execute(
                 sa_select(AdminCorrectionRule).order_by(AdminCorrectionRule.created_at)
@@ -100,20 +147,19 @@ def process_meeting(self, meeting_id: int):
             rule_pairs = list({**dict(seed_pairs), **dict(db_pairs)}.items())
             if rule_pairs:
                 transcript = apply_rule_based_correction(transcript, rule_pairs)
-                meeting.transcript = transcript
-                session.commit()
                 logger.info(
                     "[%s] Rule-based 교정 완료 (시드 %d + DB %d = 총 %d 규칙)",
                     meeting_id, len(seed_pairs), len(db_pairs), len(rule_pairs),
                 )
 
-            # ── Step 1.5b: LLM 기반 STT 후처리 ──────────────────────────
             admin_terms = [
-                (r.term + (f" ({r.description})" if r.description else ""))
-                for r in session.execute(sa_select(AdminGlossaryTerm).order_by(AdminGlossaryTerm.created_at)).scalars().all()
+                r.term + (f" ({r.description})" if r.description else "")
+                for r in session.execute(
+                    sa_select(AdminGlossaryTerm).order_by(AdminGlossaryTerm.created_at)
+                ).scalars().all()
             ]
             user_terms = [
-                (r.term + (f" ({r.description})" if r.description else ""))
+                r.term + (f" ({r.description})" if r.description else "")
                 for r in session.execute(
                     sa_select(UserGlossaryTerm)
                     .where(UserGlossaryTerm.user_id == meeting.created_by)
@@ -133,20 +179,39 @@ def process_meeting(self, meeting_id: int):
                 user_terms=user_terms,
                 effective=effective,
             )
-
-            # ── Step 1.5c: 문장 단위 줄바꿈 포맷팅 (Kiwi) ────────────────
             transcript = split_into_lines(transcript)
 
             meeting.transcript = transcript
             session.commit()
             logger.info("[%s] STT 후처리 완료 (%d chars)", meeting_id, len(transcript))
-            _save_markdown_snapshot(meeting, "02_asr_postprocessed", "음성인식 후처리 결과", transcript)
+            _save_markdown_snapshot(
+                meeting, "02_asr_postprocessed", "음성인식 후처리 결과", transcript
+            )
+            return meeting_id
+        except Exception as exc:
+            _retry_stage(self, session, meeting_id, "STT 후처리", exc)
 
-            # ── Step 2: LLM ───────────────────────────────────────────────
+
+@celery_app.task(bind=True, name="process_meeting.minutes", max_retries=2)
+def generate_minutes_task(self, meeting_id: int):
+    from app.models.meeting import ActionItem, Decision
+    from app.models.user import User  # noqa: F401 — registers relationship mapper
+    from app.services import llm
+    from app.services.runtime_settings import get_effective_settings_sync
+
+    with SyncSession() as session:
+        meeting = _get_meeting(session, meeting_id)
+        if not meeting:
+            logger.error("Meeting %s not found", meeting_id)
+            return meeting_id
+
+        try:
             meeting.status = "llm_processing"
             session.commit()
             logger.info("[%s] LLM 시작", meeting_id)
 
+            effective = get_effective_settings_sync(session)
+            transcript = meeting.transcript or ""
             result = llm.generate_minutes(
                 title=meeting.title,
                 meeting_date=str(meeting.meeting_date) if meeting.meeting_date else "",
@@ -159,7 +224,6 @@ def process_meeting(self, meeting_id: int):
 
             meeting.summary = result.get("summary", "")
 
-            # Replace existing decisions / action items
             session.query(Decision).filter_by(meeting_id=meeting_id).delete()
             for i, content in enumerate(result.get("decisions", [])):
                 session.add(Decision(meeting_id=meeting_id, content=str(content), order=i))
@@ -175,24 +239,13 @@ def process_meeting(self, meeting_id: int):
                     order=i,
                 ))
 
-            _save_markdown_snapshot(meeting, "03_summary", "LLM 요약 결과", meeting.summary)
-
             meeting.status = "done"
             session.commit()
+            _save_markdown_snapshot(meeting, "03_summary", "LLM 요약 결과", meeting.summary)
             logger.info("[%s] 처리 완료", meeting_id)
-
+            return meeting_id
         except Exception as exc:
-            logger.exception("[%s] 처리 실패: %s", meeting_id, exc)
-            session.rollback()
-            try:
-                meeting = _get_meeting(session, meeting_id)
-                if meeting:
-                    meeting.status = "failed"
-                    meeting.error_message = str(exc)[:500]
-                    session.commit()
-            except Exception:
-                pass
-            raise self.retry(exc=exc, countdown=10) from exc
+            _retry_stage(self, session, meeting_id, "회의록 생성", exc)
 
 
 def _parse_date(value):

@@ -1,6 +1,5 @@
-import httpx
-
 from app.config import settings
+from app.services.http_clients import get_http_client, get_openai_client
 
 
 def transcribe(file_path: str, effective: dict | None = None) -> str:
@@ -19,8 +18,8 @@ def transcribe(file_path: str, effective: dict | None = None) -> str:
 
 
 def _transcribe_whisper(file_path: str, cfg: dict) -> str:
-    from openai import OpenAI
-    client = OpenAI(api_key=cfg["OPENAI_API_KEY"], timeout=int(cfg.get("ASR_TIMEOUT") or settings.ASR_TIMEOUT))
+    timeout = int(cfg.get("ASR_TIMEOUT") or settings.ASR_TIMEOUT)
+    client = get_openai_client(api_key=cfg["OPENAI_API_KEY"], timeout=timeout)
     with open(file_path, "rb") as f:
         response = client.audio.transcriptions.create(model="whisper-1", file=f)
     return response.text
@@ -37,9 +36,9 @@ def _transcribe_http(file_path: str, cfg: dict) -> str:
     timeout = int(cfg.get("ASR_TIMEOUT") or settings.ASR_TIMEOUT)
 
     with open(file_path, "rb") as audio_file:
-        with httpx.Client(timeout=timeout) as client:
-            response = client.post(url, files={file_field: audio_file}, headers=headers)
-            response.raise_for_status()
+        client = get_http_client(timeout)
+        response = client.post(url, files={file_field: audio_file}, headers=headers)
+        response.raise_for_status()
 
     data = response.json()
     text = data.get(response_field, "")

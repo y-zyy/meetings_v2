@@ -1,5 +1,7 @@
 """STT 후처리: LLM을 사용해 음성인식 오류를 보정합니다."""
 
+from app.services.http_clients import get_openai_client
+
 SYSTEM_PROMPT = (
     "당신은 음성인식(STT) 결과를 후처리하는 전문가입니다. "
     "음성인식 출력에서 발생한 오인식 용어, 인명, 장소, 전문용어 등의 오류를 수정합니다. "
@@ -77,7 +79,6 @@ def postprocess_transcript(
 
 def _call_llm(prompt: str, effective: dict | None) -> str:
     from app.config import settings
-    from openai import OpenAI
 
     cfg = effective or {}
     base_url = cfg.get("LLM_API_BASE_URL") or settings.LLM_API_BASE_URL
@@ -86,7 +87,7 @@ def _call_llm(prompt: str, effective: dict | None) -> str:
     timeout = int(cfg.get("LLM_TIMEOUT") or settings.LLM_TIMEOUT)
     max_tokens = int(cfg.get("LLM_MAX_TOKENS") or settings.LLM_MAX_TOKENS)
 
-    client = OpenAI(base_url=base_url, api_key=api_key, timeout=timeout)
+    client = get_openai_client(base_url=base_url, api_key=api_key, timeout=timeout)
     response = client.chat.completions.create(
         model=model,
         messages=[

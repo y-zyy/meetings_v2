@@ -18,6 +18,4 @@ celery_app.conf.update(
     task_track_started=True,
     task_acks_late=True,
     worker_prefetch_multiplier=1,  # one task at a time per worker (ASR is heavy)
-    task_time_limit=settings.ASR_TIMEOUT + settings.LLM_TIMEOUT + 60,
-    task_soft_time_limit=settings.ASR_TIMEOUT + settings.LLM_TIMEOUT,
 )

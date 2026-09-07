@@ -1,4 +1,5 @@
 from app.config import settings
+from app.services.http_clients import get_openai_client
 
 USER_PROMPT_TEMPLATE = """\
 회의 제목: {title}
@@ -76,14 +77,13 @@ def generate_minutes(
 
 
 def _call_openai(prompt: str, cfg: dict) -> str:
-    from openai import OpenAI
     base_url = cfg.get("LLM_API_BASE_URL") or settings.LLM_API_BASE_URL
     api_key = cfg.get("LLM_API_KEY") or "none"
     model = cfg.get("LLM_MODEL") or settings.LLM_MODEL
     timeout = int(cfg.get("LLM_TIMEOUT") or settings.LLM_TIMEOUT)
     max_tokens = int(cfg.get("LLM_MAX_TOKENS") or settings.LLM_MAX_TOKENS)
 
-    client = OpenAI(base_url=base_url, api_key=api_key, timeout=timeout)
+    client = get_openai_client(base_url=base_url, api_key=api_key, timeout=timeout)
     response = client.chat.completions.create(
         model=model,
         messages=[
