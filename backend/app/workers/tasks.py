@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 # Sync engine for Celery workers (Celery does not use asyncio)
 _sync_url = settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
-_engine = create_engine(_sync_url, pool_size=5, max_overflow=10, pool_pre_ping=True)
+_engine = create_engine(_sync_url, pool_size=1, max_overflow=1, pool_pre_ping=True)
 SyncSession = sessionmaker(bind=_engine)
 
 

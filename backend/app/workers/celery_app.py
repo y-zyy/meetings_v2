@@ -18,4 +18,10 @@ celery_app.conf.update(
     task_track_started=True,
     task_acks_late=True,
     worker_prefetch_multiplier=1,  # one task at a time per worker (ASR is heavy)
+    task_routes={
+        "process_meeting": {"queue": "asr"},
+        "process_meeting.asr": {"queue": "asr"},
+        "process_meeting.postprocess": {"queue": "postprocess"},
+        "process_meeting.minutes": {"queue": "minutes"},
+    },
 )

@@ -8,7 +8,7 @@
 #
 # 이후로는 backend/ 안의 .py 파일을 고치면:
 #   - api    : uvicorn --reload 가 감지해서 자동 재시작
-#   - worker : watchmedo가 감지해서 celery worker 프로세스를 자동 재시작
+#   - worker-* : watchmedo가 감지해서 각 Celery worker 프로세스를 자동 재시작
 # 컨테이너를 다시 빌드하거나 재시작할 필요가 없음.
 # (requirements.txt 등 의존성을 바꿀 때만 --build 다시 필요)
 
@@ -18,16 +18,53 @@ services:
       - ../backend:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-  worker:
+  worker-asr:
     volumes:
       - ../backend:/app
-    command: >
-      watchmedo auto-restart
-      --directory=./app
-      --pattern=*.py
-      --recursive
-      --
-      celery -A app.workers.celery_app worker
-      --loglevel=info
-      --concurrency=4
-      --queues=celery
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        exec watchmedo auto-restart
+        --directory=./app
+        --pattern=*.py
+        --recursive
+        --
+        celery -A app.workers.celery_app worker
+        --loglevel=info
+        --concurrency="$${ASR_WORKER_CONCURRENCY:-10}"
+        --queues=asr
+
+  worker-postprocess:
+    volumes:
+      - ../backend:/app
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        exec watchmedo auto-restart
+        --directory=./app
+        --pattern=*.py
+        --recursive
+        --
+        celery -A app.workers.celery_app worker
+        --loglevel=info
+        --concurrency="$${POSTPROCESS_WORKER_CONCURRENCY:-10}"
+        --queues=postprocess
+
+  worker-minutes:
+    volumes:
+      - ../backend:/app
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        exec watchmedo auto-restart
+        --directory=./app
+        --pattern=*.py
+        --recursive
+        --
+        celery -A app.workers.celery_app worker
+        --loglevel=info
+        --concurrency="$${MINUTES_WORKER_CONCURRENCY:-10}"
+        --queues=minutes

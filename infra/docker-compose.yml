@@ -3,6 +3,23 @@ version: "3.9"
 x-api-env: &api-env
   env_file: ../.env
 
+x-worker-common: &worker-common
+  build:
+    context: ../backend
+    dockerfile: Dockerfile
+  restart: unless-stopped
+  <<: *api-env
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  volumes:
+    - ../data/uploads:/app/data/uploads
+    - ../backend/data/correction_rules_seed.json:/app/data/correction_rules_seed.json:ro
+  networks:
+    - internal
+
 services:
 
   # ── PostgreSQL ─────────────────────────────────────────────────────────────
@@ -60,28 +77,39 @@ services:
       timeout: 5s
       retries: 10
 
-  # ── Celery worker ─────────────────────────────────────────────────────────
-  worker:
-    build:
-      context: ../backend
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    command: >
-      celery -A app.workers.celery_app worker
-      --loglevel=info
-      --concurrency=4
-      --queues=celery
-    <<: *api-env
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - ../data/uploads:/app/data/uploads   # 호스트 경로에 직접 저장
-      - ../backend/data/correction_rules_seed.json:/app/data/correction_rules_seed.json:ro
-    networks:
-      - internal
+  # ── Celery workers (stage-isolated queues) ────────────────────────────────
+  worker-asr:
+    <<: *worker-common
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        exec celery -A app.workers.celery_app worker
+        --loglevel=info
+        --concurrency="$${ASR_WORKER_CONCURRENCY:-10}"
+        --queues=asr
+
+  worker-postprocess:
+    <<: *worker-common
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        exec celery -A app.workers.celery_app worker
+        --loglevel=info
+        --concurrency="$${POSTPROCESS_WORKER_CONCURRENCY:-10}"
+        --queues=postprocess
+
+  worker-minutes:
+    <<: *worker-common
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        exec celery -A app.workers.celery_app worker
+        --loglevel=info
+        --concurrency="$${MINUTES_WORKER_CONCURRENCY:-10}"
+        --queues=minutes
 
   # ── Nginx ─────────────────────────────────────────────────────────────────
   nginx:
