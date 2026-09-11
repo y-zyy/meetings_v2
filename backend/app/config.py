@@ -9,6 +9,9 @@ class Settings(BaseSettings):
 
     # Redis / Celery
     REDIS_URL: str = "redis://redis:6379/0"
+    CELERY_VISIBILITY_TIMEOUT: int = 14400
+    CELERY_TASK_SOFT_TIME_LIMIT: int = 7800
+    CELERY_TASK_TIME_LIMIT: int = 7920
 
     # Security
     SECRET_KEY: str = "insecure-default-change-me"
@@ -20,6 +23,7 @@ class Settings(BaseSettings):
     # File storage
     UPLOAD_DIR: str = "/app/data/uploads"
     MAX_UPLOAD_SIZE_MB: int = 500
+    UPLOAD_CHUNK_SIZE_MB: int = 4
 
     # Rule-based STT 교정 시드 사전 (파일 수정 시 재시작 없이 다음 회의 처리부터 반영)
     CORRECTION_RULES_SEED_PATH: str = "/app/data/correction_rules_seed.json"
@@ -50,3 +54,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+

@@ -78,6 +78,17 @@ services:
       retries: 10
 
   # ── Celery workers (stage-isolated queues) ────────────────────────────────
+  worker-ingest:
+    <<: *worker-common
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        exec celery -A app.workers.celery_app worker
+        --loglevel=info
+        --concurrency="$${INGEST_WORKER_CONCURRENCY:-2}"
+        --queues=ingest
+
   worker-asr:
     <<: *worker-common
     command:

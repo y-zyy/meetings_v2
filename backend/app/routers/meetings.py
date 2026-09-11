@@ -2,7 +2,6 @@
 
 import os
 import re
-import subprocess
 import uuid
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, UploadFile, status
@@ -75,34 +74,31 @@ async def upload_meeting(
     if ext.lower() not in _ALLOWED_EXTS:
         raise HTTPException(status_code=400, detail=f"지원하지 않는 파일 형식입니다. ({ext})")
 
-    # Read & size-check
-    content = await file.read()
-    if len(content) > _MAX_BYTES:
-        raise HTTPException(status_code=400, detail=f"파일 크기가 {settings.MAX_UPLOAD_SIZE_MB}MB를 초과합니다.")
-
-    # Persist file → FLAC 변환 후 저장
+    # Stream the upload to disk without retaining the whole file in memory.
     uid = uuid.uuid4().hex
     safe_title = re.sub(r'[\\/:*?"<>|]', '_', title).strip() or "untitled"
     dest_dir = os.path.join(settings.UPLOAD_DIR, current_user.username, safe_title)
     os.makedirs(dest_dir, exist_ok=True)
 
-    # 원본을 임시 파일로 먼저 저장
-    tmp_path = os.path.join(dest_dir, f"{uid}{ext.lower()}")
-    with open(tmp_path, "wb") as f:
-        f.write(content)
-
-    # ffmpeg으로 FLAC 변환
-    file_path = os.path.join(dest_dir, f"{uid}.flac")
+    file_path = os.path.join(dest_dir, f"{uid}{ext.lower()}")
+    chunk_size = settings.UPLOAD_CHUNK_SIZE_MB * 1024 * 1024
+    total_size = 0
     try:
-        subprocess.run(
-            ["ffmpeg", "-y", "-i", tmp_path, "-ar", "16000", "-ac", "1", file_path],
-            check=True, capture_output=True,
-        )
-        os.remove(tmp_path)  # 변환 성공 시 원본 임시 파일 삭제
-    except subprocess.CalledProcessError:
-        # 변환 실패 시 원본 유지
-        os.rename(tmp_path, os.path.join(dest_dir, f"{uid}{ext.lower()}"))
-        file_path = os.path.join(dest_dir, f"{uid}{ext.lower()}")
+        with open(file_path, "wb") as destination:
+            while chunk := await file.read(chunk_size):
+                total_size += len(chunk)
+                if total_size > _MAX_BYTES:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"파일 크기가 {settings.MAX_UPLOAD_SIZE_MB}MB를 초과합니다.",
+                    )
+                destination.write(chunk)
+    except Exception:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        raise
+    finally:
+        await file.close()
 
     # Parse date
     from datetime import date as DateType
@@ -125,7 +121,7 @@ async def upload_meeting(
         status="queued",
         file_path=file_path,
         file_name=file.filename,
-        file_size=len(content),
+        file_size=total_size,
         created_by=current_user.id,
     )
     db.add(meeting)
@@ -324,3 +320,4 @@ async def export_meeting(
         media_type=media,
         headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"},
     )
+

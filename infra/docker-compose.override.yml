@@ -18,6 +18,23 @@ services:
       - ../backend:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
+  worker-ingest:
+    volumes:
+      - ../backend:/app
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        exec watchmedo auto-restart
+        --directory=./app
+        --pattern=*.py
+        --recursive
+        --
+        celery -A app.workers.celery_app worker
+        --loglevel=info
+        --concurrency="$${INGEST_WORKER_CONCURRENCY:-2}"
+        --queues=ingest
+
   worker-asr:
     volumes:
       - ../backend:/app

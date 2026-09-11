@@ -2,6 +2,7 @@
 
 import logging
 import os
+import subprocess
 from datetime import datetime, timezone
 
 from celery import chain
@@ -77,11 +78,82 @@ def _retry_stage(task, session: Session, meeting_id: int, stage: str, exc: Excep
 def process_meeting(self, meeting_id: int):
     """Replace the compatibility entry point with a checkpointed stage chain."""
     workflow = chain(
+        convert_audio.si(meeting_id),
         transcribe_meeting.si(meeting_id),
         postprocess_meeting.si(meeting_id),
         generate_minutes_task.si(meeting_id),
     )
     return self.replace(workflow)
+
+
+@celery_app.task(bind=True, name="process_meeting.ingest", max_retries=2)
+def convert_audio(self, meeting_id: int):
+    """Convert the uploaded source to 16 kHz mono FLAC outside the API process."""
+    from app.models.user import User  # noqa: F401 — registers relationship mapper
+
+    with SyncSession() as session:
+        meeting = _get_meeting(session, meeting_id)
+        if not meeting:
+            logger.error("Meeting %s not found", meeting_id)
+            return meeting_id
+
+        source_path = meeting.file_path
+        if not source_path or not os.path.exists(source_path):
+            _retry_stage(
+                self,
+                session,
+                meeting_id,
+                "오디오 변환",
+                FileNotFoundError(source_path or "업로드 파일 경로가 없습니다."),
+            )
+
+        if os.path.splitext(source_path)[1].lower() == ".flac":
+            logger.info("[%s] FLAC 입력 — 변환 생략", meeting_id)
+            return meeting_id
+
+        target_path = os.path.splitext(source_path)[0] + ".flac"
+        temporary_target = os.path.splitext(source_path)[0] + ".converting.flac"
+        try:
+            meeting.status = "audio_processing"
+            meeting.error_message = None
+            session.commit()
+            logger.info("[%s] 오디오 변환 시작: %s", meeting_id, source_path)
+
+            subprocess.run(
+                [
+                    "ffmpeg", "-y", "-i", source_path,
+                    "-ar", "16000", "-ac", "1", temporary_target,
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            os.replace(temporary_target, target_path)
+            if source_path != target_path and os.path.exists(source_path):
+                os.remove(source_path)
+
+            meeting.file_path = target_path
+            session.commit()
+            logger.info("[%s] 오디오 변환 완료: %s", meeting_id, target_path)
+            return meeting_id
+        except subprocess.CalledProcessError as exc:
+            stderr = (exc.stderr or "").strip()
+            detail = stderr[-1000:] if stderr else str(exc)
+            _retry_stage(
+                self, session, meeting_id, "오디오 변환", RuntimeError(detail)
+            )
+        except Exception as exc:
+            _retry_stage(self, session, meeting_id, "오디오 변환", exc)
+        finally:
+            if os.path.exists(temporary_target):
+                try:
+                    os.remove(temporary_target)
+                except OSError:
+                    logger.warning(
+                        "[%s] 임시 변환 파일 삭제 실패: %s",
+                        meeting_id,
+                        temporary_target,
+                    )
 
 
 @celery_app.task(bind=True, name="process_meeting.asr", max_retries=2)
