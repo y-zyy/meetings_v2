@@ -1,5 +1,17 @@
 # meetings_v2
 
+## 음성인식 / 화자 분리 서비스
+
+- `whisperx_fastapi/`: WhisperX 기반 전사 + 정렬 서비스. `diarizen_fastapi`를
+  호출해 화자 레이블까지 붙인 결과("누가 언제 무엇을 말했는지")를 반환합니다.
+  자세한 내용은 [`whisperx_fastapi/README.md`](whisperx_fastapi/README.md) 참고.
+- `diarizen_fastapi/`: [DiariZen](https://github.com/BUTSpeechFIT/DiariZen) 화자
+  분리 모델을 감싼 서비스. 설치/실행은
+  [`diarizen_fastapi/README.md`](diarizen_fastapi/README.md) 참고.
+
+두 서비스 모두 GPU가 필요할 수 있어 `backend`/`worker`와는 별도 프로세스(또는
+별도 서버)로 `uvicorn`으로 직접 실행합니다.
+
 ## HTTPS 설정 (사내망, 자체 서명 인증서)
 
 마이크 녹음(`getUserMedia`)은 브라우저 보안 컨텍스트(HTTPS 또는 `localhost`)에서만

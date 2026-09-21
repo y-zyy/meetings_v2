@@ -1,0 +1,12 @@
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9
+
+# DiariZen 본체는 PyPI에 배포되어 있지 않습니다.
+# 아래 절차로 별도 설치한 뒤 이 requirements.txt 로 FastAPI 의존성만 설치하세요.
+#   git clone https://github.com/BUTSpeechFIT/DiariZen.git
+#   cd DiariZen
+#   pip install torch==2.1.1 torchvision==0.16.1 torchaudio==2.1.1 --index-url https://download.pytorch.org/whl/cu121
+#   pip install -r requirements.txt && pip install -e .
+#   cd pyannote-audio && pip install -e .[dev,testing] -c ../constraints.txt && cd ..
+# 자세한 내용은 README.md 참고.
