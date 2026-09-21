@@ -1,3 +1,5 @@
+import re
+
 from app.config import settings
 
 USER_PROMPT_TEMPLATE = """\
@@ -16,6 +18,10 @@ Action Item도 함께 상세하게 요약해줘.
 주어진 참석자 정보를 활용하여 다음과 같은 markdown 표 형태로 추출해줘.
 |Action Item|담당자|일정|비고|
 |------|-----|-----|-----|
+
+3. 작성 형식
+일반 텍스트(plain markdown)로만 작성하고, LaTeX/수식 표기(예: $...$, \\rightarrow)는 사용하지 마.
+화살표는 반드시 유니코드 문자 → 를 그대로 사용해줘.
 """
 
 SECOND_PASS_PROMPT_TEMPLATE = """\
@@ -41,6 +47,10 @@ SECOND_PASS_PROMPT_TEMPLATE = """\
 
 |Action Item|담당자|일정|비고|
 |------|-----|-----|-----|
+
+3. 작성 형식
+일반 텍스트(plain markdown)로만 작성하고, LaTeX/수식 표기(예: $...$, \\rightarrow)는 사용하지 마.
+화살표는 반드시 유니코드 문자 → 를 그대로 사용해줘.
 """
 
 
@@ -72,7 +82,34 @@ def generate_minutes(
     )
     final = _call_openai(second_prompt, cfg)
 
-    return {"summary": final, "decisions": [], "action_items": []}
+    return {"summary": _sanitize_latex_arrows(final), "decisions": [], "action_items": []}
+
+
+_LATEX_ARROW_MAP = {
+    r"\rightarrow": "→",
+    r"\Rightarrow": "⇒",
+    r"\leftarrow": "←",
+    r"\Leftarrow": "⇐",
+    r"\leftrightarrow": "↔",
+    r"\Leftrightarrow": "⇔",
+}
+
+# Matches a LaTeX math span like "$...\rightarrow...$" and unwraps it,
+# since the frontend's markdown renderer doesn't evaluate LaTeX.
+_LATEX_MATH_SPAN_RE = re.compile(r"\$([^$\n]*(?:\\\w+)[^$\n]*)\$")
+
+
+def _sanitize_latex_arrows(text: str) -> str:
+    def _unwrap(match: re.Match) -> str:
+        inner = match.group(1)
+        for latex, unicode_char in _LATEX_ARROW_MAP.items():
+            inner = inner.replace(latex, unicode_char)
+        return inner
+
+    text = _LATEX_MATH_SPAN_RE.sub(_unwrap, text)
+    for latex, unicode_char in _LATEX_ARROW_MAP.items():
+        text = text.replace(latex, unicode_char)
+    return text
 
 
 def _call_openai(prompt: str, cfg: dict) -> str:
