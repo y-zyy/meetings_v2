@@ -9,6 +9,7 @@ Run inside the api container:
 import asyncio
 
 from app.database import AsyncSessionLocal
+from app.models.user import User  # noqa: F401 — register model (Meeting.owner relationship)
 from app.models.meeting import Meeting  # noqa: F401 — register model
 from app.services.llm import _sanitize_latex_arrows
 from sqlalchemy import select
