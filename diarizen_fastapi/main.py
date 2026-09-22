@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class Settings:
-    model_id: str = "BUT-FIT/diarizen-wavlm-large-s80-md"
+    model_id: str = "BUT-FIT/diarizen-wavlm-large-s80-md-v2"
     model_dir: Optional[str] = None
     embedding_model: Optional[str] = None
     # 500 MiB and 6 hours. Environment variables can override these defaults.
