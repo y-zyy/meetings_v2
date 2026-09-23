@@ -74,13 +74,13 @@ def generate_minutes(
         agenda=agenda,
         transcript=transcript,
     )
-    first_draft = _call_openai(first_prompt, cfg)
+    first_draft = _call_openai(first_prompt, cfg, log_prefix="LLM(1차 요약)")
 
     second_prompt = SECOND_PASS_PROMPT_TEMPLATE.format(
         transcript=transcript,
         first_draft=first_draft,
     )
-    final = _call_openai(second_prompt, cfg)
+    final = _call_openai(second_prompt, cfg, log_prefix="LLM(2차 보강)")
 
     return {"summary": _sanitize_latex_arrows(final), "decisions": [], "action_items": []}
 
@@ -112,21 +112,32 @@ def _sanitize_latex_arrows(text: str) -> str:
     return text
 
 
-def _call_openai(prompt: str, cfg: dict) -> str:
-    from openai import OpenAI
+def _call_openai(prompt: str, cfg: dict, log_prefix: str = "LLM") -> str:
+    from app.services.llm_streaming import stream_chat_completion
+
     base_url = cfg.get("LLM_API_BASE_URL") or settings.LLM_API_BASE_URL
     api_key = cfg.get("LLM_API_KEY") or "none"
     model = cfg.get("LLM_MODEL") or settings.LLM_MODEL
     timeout = int(cfg.get("LLM_TIMEOUT") or settings.LLM_TIMEOUT)
     max_tokens = int(cfg.get("LLM_MAX_TOKENS") or settings.LLM_MAX_TOKENS)
+    repeat_max = int(cfg.get("LLM_REPEAT_MAX") or settings.LLM_REPEAT_MAX)
+    ngram_max_chars = int(cfg.get("LLM_REPEAT_NGRAM_MAX_CHARS") or settings.LLM_REPEAT_NGRAM_MAX_CHARS)
+    max_retries = int(cfg.get("LLM_STREAM_MAX_RETRIES") or settings.LLM_STREAM_MAX_RETRIES)
+    repetition_penalty = float(cfg.get("LLM_REPETITION_PENALTY") or settings.LLM_REPETITION_PENALTY)
 
-    client = OpenAI(base_url=base_url, api_key=api_key, timeout=timeout)
-    response = client.chat.completions.create(
+    return stream_chat_completion(
+        base_url=base_url,
+        api_key=api_key,
         model=model,
+        timeout=timeout,
+        max_tokens=max_tokens,
         messages=[
             {"role": "user", "content": prompt},
         ],
-        temperature=0.9, # follows the default settings
-        max_tokens=max_tokens,
+        temperature=0.9,  # follows the default settings
+        repeat_max=repeat_max,
+        ngram_max_chars=ngram_max_chars,
+        max_retries=max_retries,
+        repetition_penalty=repetition_penalty,
+        log_prefix=log_prefix,
     )
-    return response.choices[0].message.content or ""

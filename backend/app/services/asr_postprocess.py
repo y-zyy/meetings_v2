@@ -72,12 +72,14 @@ def postprocess_transcript(
         result = _call_llm(prompt, effective)
         return result.strip() if result.strip() else transcript
     except Exception:
+        # 후처리는 best-effort이므로, 반복(hallucination)으로 재생성까지
+        # 모두 실패하거나 그 외 오류가 나면 원문 STT 결과를 그대로 사용한다.
         return transcript
 
 
 def _call_llm(prompt: str, effective: dict | None) -> str:
     from app.config import settings
-    from openai import OpenAI
+    from app.services.llm_streaming import stream_chat_completion
 
     cfg = effective or {}
     base_url = cfg.get("LLM_API_BASE_URL") or settings.LLM_API_BASE_URL
@@ -85,15 +87,25 @@ def _call_llm(prompt: str, effective: dict | None) -> str:
     model = cfg.get("LLM_MODEL") or settings.LLM_MODEL
     timeout = int(cfg.get("LLM_TIMEOUT") or settings.LLM_TIMEOUT)
     max_tokens = int(cfg.get("LLM_MAX_TOKENS") or settings.LLM_MAX_TOKENS)
+    repeat_max = int(cfg.get("LLM_REPEAT_MAX") or settings.LLM_REPEAT_MAX)
+    ngram_max_chars = int(cfg.get("LLM_REPEAT_NGRAM_MAX_CHARS") or settings.LLM_REPEAT_NGRAM_MAX_CHARS)
+    max_retries = int(cfg.get("LLM_STREAM_MAX_RETRIES") or settings.LLM_STREAM_MAX_RETRIES)
+    repetition_penalty = float(cfg.get("LLM_REPETITION_PENALTY") or settings.LLM_REPETITION_PENALTY)
 
-    client = OpenAI(base_url=base_url, api_key=api_key, timeout=timeout)
-    response = client.chat.completions.create(
+    return stream_chat_completion(
+        base_url=base_url,
+        api_key=api_key,
         model=model,
+        timeout=timeout,
+        max_tokens=max_tokens,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt},
         ],
         temperature=0.1,
-        max_tokens=max_tokens,
+        repeat_max=repeat_max,
+        ngram_max_chars=ngram_max_chars,
+        max_retries=max_retries,
+        repetition_penalty=repetition_penalty,
+        log_prefix="LLM(STT 후처리)",
     )
-    return response.choices[0].message.content or ""

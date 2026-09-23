@@ -38,6 +38,22 @@ class Settings(BaseSettings):
     LLM_TIMEOUT: int = 120
     LLM_MAX_TOKENS: int = 4096
 
+    # LLM 스트리밍 반복(hallucination) 가드
+    # 반복 판정 기준(짧은 단위일수록 더 많은 반복을 요구하도록 내부에서 스케일링됨)
+    LLM_REPEAT_MAX: int = 8
+    # 몇 글자짜리 단위(phrase)까지 반복을 검사할지 (1=한 글자 ~ N=N글자 문구)
+    LLM_REPEAT_NGRAM_MAX_CHARS: int = 12
+    # 반복이 감지됐을 때 재생성을 몇 번까지 시도할지
+    LLM_STREAM_MAX_RETRIES: int = 2
+    # vLLM 등에서 지원하는 repetition_penalty (extra_body로 전달, >1.0일 때만 적용).
+    # repetition_penalty를 서버에 고정해둬도 반복이 재발하는 경우가 있어,
+    # 재시도할 때마다 이 값을 조금씩 올려서 같은 loop을 더 강하게 억제한다.
+    # Gemma 계열은 다른 모델(Llama/Qwen 등, 보통 1.1~1.15면 충분)보다 반복
+    # loop에 더 취약하다는 보고가 많아 1.3을 기본값으로 둔다. 서버/모델별로
+    # 체감 차이가 크므로 실제 트랜스크립트로 1.15~1.4 구간을 스윕해보고
+    # 정하는 것을 권장.
+    LLM_REPETITION_PENALTY: float = 1.3
+
     # Cloud inference keys (if set, take priority over local servers)
     OPENAI_API_KEY: str = ""           # Whisper ASR via OpenAI
     ANTHROPIC_API_KEY: str = ""        # Meeting-minutes LLM via Claude

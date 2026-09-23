@@ -22,6 +22,10 @@ class SettingsPatch(BaseModel):
     LLM_MODEL: str | None = None
     LLM_TIMEOUT: str | None = None
     LLM_MAX_TOKENS: str | None = None
+    LLM_REPEAT_MAX: str | None = None
+    LLM_REPEAT_NGRAM_MAX_CHARS: str | None = None
+    LLM_STREAM_MAX_RETRIES: str | None = None
+    LLM_REPETITION_PENALTY: str | None = None
     OPENAI_API_KEY: str | None = None
 
 
