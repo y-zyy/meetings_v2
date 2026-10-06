@@ -53,8 +53,8 @@ docker compose restart nginx
 
 ```bash
 cd whisperx_fastapi
-docker build -t whisperx-asr .
-docker run --gpus all -p 9000:9000 -e HF_TOKEN=<HuggingFace 토큰> whisperx-asr
+docker build -t whisperx-asr:261006 .
+docker run --gpus all -p 9000:9000 -e HF_TOKEN=<HuggingFace 토큰> whisperx-asr:261006
 ```
 
 - 처리 순서: **ASR → STT 후처리(규칙/LLM 교정) → 정렬·화자 분리 → 회의록 생성**
@@ -62,12 +62,41 @@ docker run --gpus all -p 9000:9000 -e HF_TOKEN=<HuggingFace 토큰> whisperx-asr
   - `POST /align_diarize`: 오디오 + 후처리된 `segments`(JSON, form 필드)를 받아 후처리 텍스트를 강제 정렬(align)하고
     화자를 부여. 응답 `{"language", "diarized", "segments": [{"start", "end", "speaker", "text"}]}`
     (form: `language`, `diarize`, `min_speakers`, `max_speakers`)
-  - `HF_TOKEN` 이 없으면 화자 분리는 건너뛰고 `diarized=false`, `speaker` 없이 시간 구간만 반환합니다.
+  - `HF_TOKEN` 이 없으면 화자 분리는 건너뛰고 `diarized=false`, `speaker=UNKNOWN`을 반환합니다. 백엔드는 이 라벨을 제거하고 화면은 시간 구간과 “화자 미상”을 표시합니다.
   - 백엔드는 `ASR_API_URL` 의 `/transcribe` 를 `/align_diarize` 로 치환해 호출합니다
     (`ASR_DIARIZE_API_URL` 로 지정 가능, `ASR_DIARIZE_ENABLED=false` 로 끌 수 있음).
   - 화자 분리 단계가 실패하면 화자 정보 없이 후처리된 텍스트로 회의록 생성을 계속합니다.
 - 메인 백엔드는 `segments` 를 `meetings.segments` (JSON)에 저장하고, 화면의 "발화 기록"에
-  시간 구간 / 화자 / 발화 내용을 표시합니다. 화자 이름 클릭 시 표시 이름을 변경할 수 있습니다(`speaker_names`).
+  Speaker / 발화 시간(시작–종료) / 발화 내용 순서의 표를 표시합니다. 화자 이름 클릭 시 표시 이름을 변경할 수 있습니다(`speaker_names`).
 - 기존 DB는 백엔드 기동 시 `segments`, `speaker_names` 컬럼이 자동 추가됩니다
   (alembic `005_diarization` 과 동일).
-- OpenAI Whisper 사용 시에는 화자 분리 없이 기존처럼 텍스트만 표시됩니다.
+- 기존 텍스트만 있는 기록(OpenAI Whisper 포함)도 표에 표시하며 화자는 “화자 미상”, 시간은 “—”로 표시합니다. 기존 기록을 재처리하거나 수정하지 않습니다.
+
+## 261006 이미지 빌드 및 기존 DB 유지
+
+직접 빌드하는 이미지는 `meetings-backend:261006`(API 및 4개 worker 공용),
+`meetings-frontend:261006`, `whisperx-asr:261006`입니다.
+PostgreSQL(`postgres:17-alpine`)과 Redis(`redis:7-alpine`)는 기존 공식 이미지 태그를 유지합니다.
+
+기존 서버의 동일한 체크아웃 경로에서 기존 `.env`, 업로드 폴더, 인증서와 Compose 프로젝트 이름을 유지한 채 실행하세요.
+기존 실행에 `-p` 또는 `COMPOSE_PROJECT_NAME`을 사용했다면 아래 명령에도 같은 값을 적용해야 기존 볼륨을 사용합니다.
+
+```bash
+cd infra
+docker compose build api nginx
+# 실행 중인 postgres/redis는 재생성하지 않고 애플리케이션만 교체합니다.
+docker compose up -d --no-deps api worker-ingest worker-asr worker-postprocess worker-minutes nginx
+cd ..
+docker build -t whisperx-asr:261006 ./whisperx_fastapi
+```
+
+WhisperX 컨테이너 교체 시 기존 GPU/포트/네트워크/환경 변수 설정을 유지하고 이미지 이름만
+`whisperx-asr:261006`으로 지정하세요. `.env`의 ASR 주소는 해당 서버 주소를 유지합니다.
+기본 Compose는 프런트엔드 폴더와 nginx 설정을 바인드 마운트하므로 서버의 소스도 함께 갱신해야 합니다.
+`docker-compose.override.yml`은 기존과 동일하게 개발용 소스 마운트를 적용합니다.
+
+`postgres_data` 볼륨 선언과 마운트, DB 설정 및 마이그레이션은 변경하지 않습니다.
+`docker compose down -v` 또는 볼륨 삭제/DB 초기화 명령을 실행하지 마세요.
+기존 백엔드의 시작 동작(누락된 화자 관련 컬럼 추가 등)은 그대로 유지됩니다.
+
+프런트엔드 회귀 검사: 저장소 루트에서 `node --test tests/transcript.test.cjs`.
