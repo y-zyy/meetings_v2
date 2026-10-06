@@ -13,10 +13,10 @@ def format_segments_text(segments: list[dict], speaker_names: dict | None = None
     names = speaker_names or {}
     lines = []
     for seg in segments:
-        speaker = seg.get("speaker") or "UNKNOWN"
-        label = names.get(speaker) or speaker
+        speaker = seg.get("speaker")
+        label = f" {names.get(speaker) or speaker}:" if speaker else ""
         lines.append(
-            f"[{fmt_timestamp(seg.get('start', 0))} ~ {fmt_timestamp(seg.get('end', 0))}] "
-            f"{label}: {seg.get('text', '')}"
+            f"[{fmt_timestamp(seg.get('start', 0))} ~ {fmt_timestamp(seg.get('end', 0))}]"
+            f"{label} {seg.get('text', '')}"
         )
     return "\n".join(lines)

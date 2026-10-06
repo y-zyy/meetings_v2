@@ -1542,7 +1542,7 @@ function fmtDate(iso) {
 }
 
 const STATUS_LABELS = {
-  queued: ['대기', 'b-queue'], audio_processing: ['변환', 'b-proc'], asr_processing: ['ASR', 'b-proc'], stt_postprocessing: ['후처리', 'b-proc'], llm_processing: ['LLM', 'b-proc'],
+  queued: ['대기', 'b-queue'], audio_processing: ['변환', 'b-proc'], asr_processing: ['ASR', 'b-proc'], stt_postprocessing: ['후처리', 'b-proc'], diarizing: ['화자분리', 'b-proc'], llm_processing: ['LLM', 'b-proc'],
   done: ['완료', 'b-done'], failed: ['실패', 'b-fail'],
 };
 
@@ -1656,7 +1656,7 @@ function renderTranscript(m) {
   const box = document.getElementById('transcript-text');
   const hint = document.getElementById('speaker-hint');
   const segs = m.segments;
-  if (!segs || !segs.length) {
+  if (!segs || !segs.length || !segs.some(x => x.speaker)) {
     // 화자 분리 결과가 없는 경우(OpenAI Whisper 등): 원문 텍스트 표시
     box.style.whiteSpace = 'pre-wrap';
     box.textContent = m.transcript || '(발화 기록 없음)';
@@ -1920,13 +1920,18 @@ function updateProcUI(status, errorMsg) {
     ppBadge.className = 'badge b-proc'; ppBadge.textContent = '처리 중';
     document.getElementById('pp-spinner').className = 'spin'; document.getElementById('pp-spinner').style.color = 'var(--accent)';
     addLog('log-ok', 'ASR 완료 — STT 후처리 시작 (용어사전 반영)');
+  } else if (status === 'diarizing') {
+    asrBadge.className = 'badge b-done'; asrBadge.textContent = '완료';
+    ppSection.style.opacity = '1';
+    ppBadge.className = 'badge b-proc'; ppBadge.textContent = '화자 분리 중';
+    addLog('log-ok', 'STT 후처리 완료 — 정렬 및 화자 분리 시작');
   } else if (status === 'llm_processing') {
     asrBadge.className = 'badge b-done'; asrBadge.textContent = '완료';
     ppSection.style.opacity = '1';
     ppBadge.className = 'badge b-done'; ppBadge.textContent = '완료';
     llmSection.style.opacity = '1';
     llmBadge.className = 'badge b-proc'; llmBadge.textContent = '처리 중';
-    addLog('log-ok', 'STT 후처리 완료 — 회의록 생성 시작');
+    addLog('log-ok', '정렬/화자 분리 완료 — 회의록 생성 시작');
   } else if (status === 'done') {
     asrBadge.className = 'badge b-done'; asrBadge.textContent = '완료';
     ppSection.style.opacity = '1';

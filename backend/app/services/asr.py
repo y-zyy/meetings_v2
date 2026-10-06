@@ -1,3 +1,5 @@
+import json
+
 from app.config import settings
 from app.services.http_clients import get_http_client, get_openai_client
 
@@ -71,10 +73,64 @@ def _clean_segments(raw) -> list[dict]:
             end = float(seg.get("end", start))
         except (TypeError, ValueError):
             continue
-        out.append({
-            "start": start,
-            "end": end,
-            "speaker": str(seg.get("speaker") or "UNKNOWN"),
-            "text": text,
-        })
+        item = {"start": start, "end": end, "text": text}
+        if seg.get("speaker"):
+            item["speaker"] = str(seg["speaker"])
+        out.append(item)
     return out
+
+
+def align_diarize(
+    file_path: str,
+    segments: list[dict],
+    language: str | None = None,
+    effective: dict | None = None,
+) -> dict:
+    """후처리된 segments 텍스트를 오디오에 정렬하고 화자를 부여한다 (WhisperX 서버 /align_diarize).
+
+    Returns {"language", "diarized", "segments": [{start, end, speaker, text}]}.
+    """
+    cfg = effective or {}
+    url = settings.ASR_DIARIZE_API_URL or _derive_diarize_url(
+        cfg.get("ASR_API_URL") or settings.ASR_API_URL
+    )
+    api_key = cfg.get("ASR_API_KEY") or settings.ASR_API_KEY
+    file_field = cfg.get("ASR_FILE_FIELD") or settings.ASR_FILE_FIELD
+    timeout = int(cfg.get("ASR_TIMEOUT") or settings.ASR_TIMEOUT)
+
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+    form = {
+        "segments": json.dumps(
+            [{"start": s["start"], "end": s["end"], "text": s["text"]} for s in segments],
+            ensure_ascii=False,
+        ),
+    }
+    if language:
+        form["language"] = language
+    if settings.ASR_MIN_SPEAKERS:
+        form["min_speakers"] = str(settings.ASR_MIN_SPEAKERS)
+    if settings.ASR_MAX_SPEAKERS:
+        form["max_speakers"] = str(settings.ASR_MAX_SPEAKERS)
+
+    with open(file_path, "rb") as audio_file:
+        client = get_http_client(timeout)
+        response = client.post(
+            url, data=form, files={file_field: audio_file}, headers=headers
+        )
+        response.raise_for_status()
+
+    data = response.json()
+    diarized = bool(data.get("diarized"))
+    cleaned = _clean_segments(data.get("segments"))
+    if not diarized:
+        # 화자 분리가 수행되지 않았으면(HF_TOKEN 없음 등) UNKNOWN 라벨을 남기지 않는다.
+        for seg in cleaned:
+            seg.pop("speaker", None)
+    return {"language": data.get("language"), "diarized": diarized, "segments": cleaned}
+
+
+def _derive_diarize_url(asr_url: str) -> str:
+    base = asr_url.rstrip("/")
+    if base.endswith("/transcribe"):
+        base = base[: -len("/transcribe")]
+    return base + "/align_diarize"

@@ -31,6 +31,7 @@ celery_app.conf.update(
         "process_meeting.ingest": {"queue": "ingest"},
         "process_meeting.asr": {"queue": "asr"},
         "process_meeting.postprocess": {"queue": "postprocess"},
+        "process_meeting.diarize": {"queue": "asr"},
         "process_meeting.minutes": {"queue": "minutes"},
     },
 )

@@ -30,7 +30,7 @@ class ActionItemUpdate(BaseModel):
 class TranscriptSegment(BaseModel):
     start: float
     end: float
-    speaker: str
+    speaker: str | None = None
     text: str
 
 

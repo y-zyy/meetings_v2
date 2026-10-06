@@ -57,9 +57,15 @@ docker build -t whisperx-asr .
 docker run --gpus all -p 9000:9000 -e HF_TOKEN=<HuggingFace 토큰> whisperx-asr
 ```
 
-- `POST /transcribe` 응답: `{"text", "language", "diarized", "segments": [{"start", "end", "speaker", "text"}]}`
-  - 쿼리: `diarize`(기본 true), `min_speakers`, `max_speakers`
-  - `HF_TOKEN` 이 없으면 화자 분리는 건너뛰고 `speaker` 는 `UNKNOWN` 으로 반환됩니다.
+- 처리 순서: **ASR → STT 후처리(규칙/LLM 교정) → 정렬·화자 분리 → 회의록 생성**
+  - `POST /transcribe`: 전사만 수행. 응답 `{"text", "language", "segments": [{"start", "end", "text"}]}`
+  - `POST /align_diarize`: 오디오 + 후처리된 `segments`(JSON, form 필드)를 받아 후처리 텍스트를 강제 정렬(align)하고
+    화자를 부여. 응답 `{"language", "diarized", "segments": [{"start", "end", "speaker", "text"}]}`
+    (form: `language`, `diarize`, `min_speakers`, `max_speakers`)
+  - `HF_TOKEN` 이 없으면 화자 분리는 건너뛰고 `diarized=false`, `speaker` 없이 시간 구간만 반환합니다.
+  - 백엔드는 `ASR_API_URL` 의 `/transcribe` 를 `/align_diarize` 로 치환해 호출합니다
+    (`ASR_DIARIZE_API_URL` 로 지정 가능, `ASR_DIARIZE_ENABLED=false` 로 끌 수 있음).
+  - 화자 분리 단계가 실패하면 화자 정보 없이 후처리된 텍스트로 회의록 생성을 계속합니다.
 - 메인 백엔드는 `segments` 를 `meetings.segments` (JSON)에 저장하고, 화면의 "발화 기록"에
   시간 구간 / 화자 / 발화 내용을 표시합니다. 화자 이름 클릭 시 표시 이름을 변경할 수 있습니다(`speaker_names`).
 - 기존 DB는 백엔드 기동 시 `segments`, `speaker_names` 컬럼이 자동 추가됩니다

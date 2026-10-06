@@ -1,5 +1,6 @@
 """Celery tasks for the staged ASR + LLM processing pipeline."""
 
+import copy
 import logging
 import os
 import subprocess
@@ -81,6 +82,7 @@ def process_meeting(self, meeting_id: int):
         convert_audio.si(meeting_id),
         transcribe_meeting.si(meeting_id),
         postprocess_meeting.si(meeting_id),
+        diarize_meeting.si(meeting_id),
         generate_minutes_task.si(meeting_id),
     )
     return self.replace(workflow)
@@ -161,8 +163,6 @@ def transcribe_meeting(self, meeting_id: int):
     from app.models.user import User  # noqa: F401 — registers relationship mapper
     from app.services import asr
     from app.services.runtime_settings import get_effective_settings_sync
-    from app.services.speaker import format_segments_text
-
     with SyncSession() as session:
         meeting = _get_meeting(session, meeting_id)
         if not meeting:
@@ -178,12 +178,12 @@ def transcribe_meeting(self, meeting_id: int):
             effective = get_effective_settings_sync(session)
             asr_result = asr.transcribe_detailed(meeting.file_path, effective)
             segments = asr_result["segments"]
-            if segments:
-                meeting.segments = segments
-                transcript = format_segments_text(segments)
-            else:
-                meeting.segments = None
-                transcript = asr_result["text"]
+            # 정렬/화자 분리는 후처리 이후(diarize_meeting)에 수행한다.
+            meeting.segments = segments or None
+            meeting.language = asr_result.get("language") or meeting.language
+            transcript = (
+                "\n".join(seg["text"] for seg in segments) if segments else asr_result["text"]
+            )
             meeting.transcript = transcript
             session.commit()
 
@@ -203,10 +203,14 @@ def postprocess_meeting(self, meeting_id: int):
     from app.models.glossary import AdminCorrectionRule, AdminGlossaryTerm, UserGlossaryTerm
     from app.models.user import User  # noqa: F401 — registers relationship mapper
     from app.services import asr_postprocess
-    from app.services.asr_postprocess_rule import apply_rule_based_correction, load_seed_pairs
+    from app.services.asr_postprocess_rule import (
+        ASRPostProcessor,
+        apply_rule_based_correction,
+        build_glossary_index,
+        load_seed_pairs,
+    )
     from app.services.runtime_settings import get_effective_settings_sync
     from app.services.sentence_split import split_into_lines
-    from app.services.speaker import format_segments_text
 
     with SyncSession() as session:
         meeting = _get_meeting(session, meeting_id)
@@ -220,7 +224,7 @@ def postprocess_meeting(self, meeting_id: int):
             logger.info("[%s] STT 후처리 시작", meeting_id)
 
             effective = get_effective_settings_sync(session)
-            segments = list(meeting.segments or [])
+            segments = copy.deepcopy(meeting.segments or [])
             if segments:
                 transcript = "\n".join(seg["text"] for seg in segments)
             else:
@@ -233,7 +237,14 @@ def postprocess_meeting(self, meeting_id: int):
             db_pairs = [(r.wrong, r.correct) for r in correction_rules]
             rule_pairs = list({**dict(seed_pairs), **dict(db_pairs)}.items())
             if rule_pairs:
-                transcript = apply_rule_based_correction(transcript, rule_pairs)
+                if segments:
+                    # 발화(줄) 단위 매핑을 유지하기 위해 세그먼트별로 교정
+                    processor = ASRPostProcessor(build_glossary_index(rule_pairs))
+                    for seg in segments:
+                        seg["text"] = processor.correct_text(seg["text"]) if seg["text"] else seg["text"]
+                    transcript = "\n".join(seg["text"] for seg in segments)
+                else:
+                    transcript = apply_rule_based_correction(transcript, rule_pairs)
                 logger.info(
                     "[%s] Rule-based 교정 완료 (시드 %d + DB %d = 총 %d 규칙)",
                     meeting_id, len(seed_pairs), len(db_pairs), len(rule_pairs),
@@ -274,11 +285,11 @@ def postprocess_meeting(self, meeting_id: int):
                         seg["text"] = line.strip() or seg["text"]
                 else:
                     logger.warning(
-                        "[%s] 후처리 결과 줄 수 불일치(%d != %d) — 발화별 교정 결과 반영 생략",
+                        "[%s] LLM 후처리 결과 줄 수 불일치(%d != %d) — rule 교정 결과만 반영",
                         meeting_id, len(corrected_lines), len(segments),
                     )
                 meeting.segments = segments
-                transcript = format_segments_text(segments)
+                transcript = "\n".join(seg["text"] for seg in segments)
             else:
                 transcript = split_into_lines(transcript)
 
@@ -291,6 +302,57 @@ def postprocess_meeting(self, meeting_id: int):
             return meeting_id
         except Exception as exc:
             _retry_stage(self, session, meeting_id, "STT 후처리", exc)
+
+
+@celery_app.task(bind=True, name="process_meeting.diarize", max_retries=2)
+def diarize_meeting(self, meeting_id: int):
+    """후처리된 텍스트를 오디오에 정렬(align)하고 화자(diarize)를 부여한다."""
+    from app.models.user import User  # noqa: F401 — registers relationship mapper
+    from app.services import asr
+    from app.services.runtime_settings import get_effective_settings_sync
+    from app.services.speaker import format_segments_text
+
+    with SyncSession() as session:
+        meeting = _get_meeting(session, meeting_id)
+        if not meeting:
+            logger.error("Meeting %s not found", meeting_id)
+            return meeting_id
+
+        segments = copy.deepcopy(meeting.segments or [])
+        if not segments or not settings.ASR_DIARIZE_ENABLED:
+            logger.info("[%s] 화자 분리 생략 (segments 없음 또는 비활성화)", meeting_id)
+            return meeting_id
+
+        try:
+            meeting.status = "diarizing"
+            session.commit()
+            logger.info("[%s] 정렬/화자 분리 시작 (%d segments)", meeting_id, len(segments))
+
+            result = asr.align_diarize(
+                meeting.file_path, segments, meeting.language,
+                get_effective_settings_sync(session),
+            )
+            if not result["segments"]:
+                raise RuntimeError("정렬/화자 분리 결과가 비어 있습니다.")
+
+            meeting.segments = result["segments"]
+            meeting.transcript = format_segments_text(result["segments"], meeting.speaker_names)
+            session.commit()
+            logger.info(
+                "[%s] 정렬/화자 분리 완료 (%d segments, diarized=%s)",
+                meeting_id, len(result["segments"]), result["diarized"],
+            )
+            _save_markdown_snapshot(
+                meeting, "02b_diarized", "화자 분리 결과", meeting.transcript
+            )
+            return meeting_id
+        except Exception as exc:
+            if self.request.retries >= self.max_retries:
+                # 화자 분리 실패가 회의록 생성 자체를 막지 않도록, 화자 없는 후처리 텍스트로 계속 진행
+                session.rollback()
+                logger.exception("[%s] 화자 분리 실패 — 화자 정보 없이 계속 진행: %s", meeting_id, exc)
+                return meeting_id
+            _retry_stage(self, session, meeting_id, "화자 분리", exc)
 
 
 @celery_app.task(bind=True, name="process_meeting.minutes", max_retries=2)

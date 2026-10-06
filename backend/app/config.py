@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     ASR_FILE_FIELD: str = "file"
     ASR_RESPONSE_FIELD: str = "text"
     ASR_TIMEOUT: int = 7200
+    # 후처리 이후 정렬/화자 분리 (비어 있으면 ASR_API_URL 의 /transcribe 를 /align_diarize 로 치환)
+    ASR_DIARIZE_ENABLED: bool = True
+    ASR_DIARIZE_API_URL: str = ""
+    ASR_MIN_SPEAKERS: int | None = None
+    ASR_MAX_SPEAKERS: int | None = None
 
     # LLM (OpenAI-compatible local server)
     LLM_API_BASE_URL: str = "http://llm-server:8000/v1"

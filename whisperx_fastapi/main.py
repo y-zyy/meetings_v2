@@ -1,13 +1,14 @@
 """FastAPI service for bounded, GPU-backed WhisperX transcription."""
 
 import asyncio
+import json
 import os
 import tempfile
 from contextlib import asynccontextmanager
 from typing import Optional
 
 import whisperx
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 from whisperx.diarize import DiarizationPipeline
 
@@ -76,19 +77,8 @@ async def health_check():
     }
 
 
-@app.post("/transcribe")
-async def transcribe(
-    request: Request,
-    file: UploadFile = File(...),
-    language: Optional[str] = None,
-    batch_size: int = BATCH_SIZE,
-    diarize: bool = DEFAULT_DIARIZE,
-    min_speakers: Optional[int] = None,
-    max_speakers: Optional[int] = None,
-):
-    if "whisperx" not in models:
-        raise HTTPException(status_code=503, detail="Model not loaded yet")
-
+async def _save_upload(file: UploadFile) -> tuple[str, str]:
+    """업로드 파일을 임시 파일로 저장하고 (경로, 확장자)를 돌려준다."""
     allowed_exts = {".mp3", ".wav", ".m4a", ".flac", ".ogg", ".webm"}
     ext = os.path.splitext(file.filename or "")[-1].lower()
     if ext not in allowed_exts:
@@ -107,16 +97,87 @@ async def transcribe(
                         detail="Uploaded file is too large",
                     )
                 await asyncio.to_thread(tmp.write, chunk)
+    except BaseException:
+        if tmp_path and os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+        raise
+    return tmp_path, ext
 
+
+@app.post("/transcribe")
+async def transcribe(
+    request: Request,
+    file: UploadFile = File(...),
+    language: Optional[str] = None,
+    batch_size: int = BATCH_SIZE,
+):
+    """1단계: 전사만 수행한다. (정렬/화자 분리는 후처리 이후 /align_diarize 에서 수행)
+
+    응답: {"text", "language", "segments": [{"start", "end", "text"}]}
+    """
+    if "whisperx" not in models:
+        raise HTTPException(status_code=503, detail="Model not loaded yet")
+
+    tmp_path = None
+    try:
+        tmp_path, _ = await _save_upload(file)
         effective_batch_size = min(max(1, batch_size), MAX_BATCH_SIZE)
         async with request.app.state.inference_semaphore:
             loop = asyncio.get_running_loop()
             result = await loop.run_in_executor(
+                None, _run_transcription, tmp_path, language, effective_batch_size
+            )
+        return JSONResponse(content=result)
+    finally:
+        await file.close()
+        if tmp_path and os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+
+
+@app.post("/align_diarize")
+async def align_diarize(
+    request: Request,
+    file: UploadFile = File(...),
+    segments: str = Form(..., description='후처리된 세그먼트 JSON: [{"start","end","text"}]'),
+    language: Optional[str] = Form(None),
+    diarize: bool = Form(DEFAULT_DIARIZE),
+    min_speakers: Optional[int] = Form(None),
+    max_speakers: Optional[int] = Form(None),
+):
+    """2단계: 후처리를 거친 텍스트를 오디오에 강제 정렬(align)하고 화자(diarize)를 부여한다.
+
+    응답: {"language", "diarized", "segments": [{"start", "end", "speaker", "text"}]}
+    """
+    if "whisperx" not in models:
+        raise HTTPException(status_code=503, detail="Model not loaded yet")
+
+    try:
+        parsed = json.loads(segments)
+        input_segments = [
+            {
+                "start": float(seg["start"]),
+                "end": float(seg["end"]),
+                "text": str(seg.get("text") or "").strip(),
+            }
+            for seg in parsed
+            if str(seg.get("text") or "").strip()
+        ]
+    except (ValueError, TypeError, KeyError) as exc:
+        raise HTTPException(status_code=422, detail=f"Invalid segments JSON: {exc}")
+    if not input_segments:
+        return JSONResponse(content={"language": language, "diarized": False, "segments": []})
+
+    tmp_path = None
+    try:
+        tmp_path, _ = await _save_upload(file)
+        async with request.app.state.inference_semaphore:
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(
                 None,
-                _run_transcription,
+                _run_align_diarize,
                 tmp_path,
-                language,
-                effective_batch_size,
+                input_segments,
+                language or "ko",
                 diarize,
                 min_speakers,
                 max_speakers,
@@ -167,7 +228,8 @@ def _split_by_speaker(segment: dict) -> list[dict]:
     out = []
     for run in runs:
         ws = run["words"]
-        text = " ".join((w.get("word") or "").strip() for w in ws).strip()
+        # 화자가 하나뿐이면 후처리된 원문 텍스트를 그대로 유지한다.
+        text = (segment.get("text") or "").strip() if len(runs) == 1 else " ".join((w.get("word") or "").strip() for w in ws).strip()
         if not text:
             continue
         starts = [w["start"] for w in ws if "start" in w]
@@ -185,29 +247,50 @@ def _run_transcription(
     audio_path: str,
     language: Optional[str],
     batch_size: int,
-    diarize: bool,
-    min_speakers: Optional[int],
-    max_speakers: Optional[int],
 ) -> dict:
     """Synchronous GPU inference executed outside the event loop."""
     model = models["whisperx"]
     audio = whisperx.load_audio(audio_path)
-
-    # 1. Transcribe
     result = model.transcribe(audio, batch_size=batch_size, language=language)
-    detected_language = result.get("language") or language or "ko"
+    segments = [
+        {
+            "start": round(float(seg["start"]), 3),
+            "end": round(float(seg["end"]), 3),
+            "text": seg["text"].strip(),
+        }
+        for seg in result["segments"]
+        if seg["text"].strip()
+    ]
     text = "".join(segment["text"] for segment in result["segments"]).strip()
+    return {
+        "text": text,
+        "language": result.get("language") or language,
+        "segments": segments,
+    }
 
-    # 2. Align (단어 단위 타임스탬프)
-    aligned = _get_align_model(detected_language)
+
+def _run_align_diarize(
+    audio_path: str,
+    input_segments: list[dict],
+    language: str,
+    diarize: bool,
+    min_speakers: Optional[int],
+    max_speakers: Optional[int],
+) -> dict:
+    """후처리된 세그먼트 텍스트를 정렬하고 화자 라벨을 붙인다."""
+    audio = whisperx.load_audio(audio_path)
+    result = {"segments": input_segments, "language": language}
+
+    # 2. Align whisper output (후처리된 텍스트 기준 단어 타임스탬프)
+    aligned = _get_align_model(language)
     if aligned is not None:
         model_a, metadata = aligned
         result = whisperx.align(
-            result["segments"], model_a, metadata, audio, DEVICE,
+            input_segments, model_a, metadata, audio, DEVICE,
             return_char_alignments=False,
         )
 
-    # 3. Diarize (화자 라벨 부여)
+    # 3. Assign speaker labels
     diarized = False
     if diarize and "diarize" in models:
         diarize_kwargs = {}
@@ -223,9 +306,4 @@ def _run_transcription(
     for seg in result["segments"]:
         segments.extend(_split_by_speaker(seg))
 
-    return {
-        "text": text,
-        "language": detected_language,
-        "diarized": diarized,
-        "segments": segments,
-    }
+    return {"language": language, "diarized": diarized, "segments": segments}
