@@ -247,12 +247,14 @@ td.col-date{color:var(--text3);white-space:nowrap;width:1%;}
 .step-line{flex:1;height:1px;background:var(--border);margin:0 8px;min-width:20px;}
 .card{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;box-shadow:var(--shadow);}
 .card-sm{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;}
-.utt{display:grid;grid-template-columns:118px 1fr;gap:4px 12px;padding:8px 0;border-bottom:1px solid var(--border);}
-.utt:last-child{border-bottom:none;}
-.utt-time{font-size:11px;color:var(--text3);font-variant-numeric:tabular-nums;white-space:nowrap;}
-.utt-speaker{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:10px;border:1px solid currentColor;cursor:pointer;margin-top:3px;}
-.utt-text{font-size:13px;line-height:1.7;color:var(--text);}
-.utt-meta{display:flex;flex-direction:column;align-items:flex-start;}
+.utt{display:flex;gap:12px;padding:12px 0;}
+.utt-avatar{flex:0 0 36px;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;}
+.utt-body{flex:1;min-width:0;}
+.utt-head{display:flex;align-items:baseline;gap:8px;margin-bottom:3px;}
+.utt-speaker{font-size:13px;font-weight:700;color:var(--text);cursor:pointer;}
+.utt-speaker:hover{text-decoration:underline;}
+.utt-time{font-size:11px;color:var(--text3);font-variant-numeric:tabular-nums;}
+.utt-text{font-size:13px;line-height:1.7;color:var(--text);word-break:keep-all;overflow-wrap:anywhere;}
 .section-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:12px;}
 .divider{height:1px;background:var(--border);margin:14px 0;}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
@@ -1644,12 +1646,13 @@ function renderDetail(m) {
 }
 
 let _detailMeeting = null;
-const SPEAKER_COLORS = ['#2563eb', '#dc2626', '#059669', '#d97706', '#7c3aed', '#db2777', '#0891b2', '#65a30d'];
+const SPEAKER_COLORS = ['#4f7cff', '#f0728f', '#2fb67c', '#f5a524', '#8b6cf0', '#ec6bb0', '#1fa8c9', '#7fb83a'];
 
 function fmtClock(sec) {
   const t = Math.max(0, Math.floor(sec || 0));
   const p = n => String(n).padStart(2, '0');
-  return `${p(Math.floor(t / 3600))}:${p(Math.floor(t % 3600 / 60))}:${p(t % 60)}`;
+  const h = Math.floor(t / 3600);
+  return (h ? `${h}:` : '') + `${p(Math.floor(t % 3600 / 60))}:${p(t % 60)}`;
 }
 
 function renderTranscript(m) {
@@ -1665,16 +1668,27 @@ function renderTranscript(m) {
   }
   const names = m.speaker_names || {};
   const order = [];
-  segs.forEach(s => { if (!order.includes(s.speaker)) order.push(s.speaker); });
+  segs.forEach(x => { if (!order.includes(x.speaker)) order.push(x.speaker); });
+  // 같은 화자의 연속 발화는 한 말풍선으로 묶는다
+  const turns = [];
+  segs.forEach(x => {
+    const last = turns[turns.length - 1];
+    if (last && last.speaker === x.speaker) last.texts.push(x.text);
+    else turns.push({ speaker: x.speaker, start: x.start, texts: [x.text] });
+  });
   box.style.whiteSpace = 'normal';
-  box.innerHTML = segs.map(s => {
-    const color = SPEAKER_COLORS[order.indexOf(s.speaker) % SPEAKER_COLORS.length];
+  box.innerHTML = turns.map(t => {
+    const color = SPEAKER_COLORS[order.indexOf(t.speaker) % SPEAKER_COLORS.length];
+    const name = names[t.speaker] || t.speaker || '화자 미상';
     return `<div class="utt">
-      <div class="utt-meta">
-        <span class="utt-time">${fmtClock(s.start)} ~ ${fmtClock(s.end)}</span>
-        <span class="utt-speaker" style="color:${color}" data-speaker="${esc(s.speaker)}" onclick="renameSpeaker(this.dataset.speaker)">${esc(names[s.speaker] || s.speaker)}</span>
+      <div class="utt-avatar" style="background:${color}">${esc([...name][0] || '?')}</div>
+      <div class="utt-body">
+        <div class="utt-head">
+          <span class="utt-speaker" title="클릭하여 이름 변경" data-speaker="${esc(t.speaker)}" onclick="renameSpeaker(this.dataset.speaker)">${esc(name)}</span>
+          <span class="utt-time">${fmtClock(t.start)}</span>
+        </div>
+        <div class="utt-text">${esc(t.texts.join(' '))}</div>
       </div>
-      <div class="utt-text">${esc(s.text)}</div>
     </div>`;
   }).join('');
   hint.style.display = '';
