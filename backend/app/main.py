@@ -42,8 +42,19 @@ async def on_startup():
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(_ensure_diarization_columns)
 
     await _seed_admin()
+
+
+def _ensure_diarization_columns(sync_conn):
+    """create_all은 기존 테이블에 컬럼을 추가하지 않으므로 화자 분리 컬럼을 보강한다 (alembic 005와 동일)."""
+    from sqlalchemy import inspect, text
+
+    existing = {c["name"] for c in inspect(sync_conn).get_columns("meetings")}
+    for col in ("segments", "speaker_names"):
+        if col not in existing:
+            sync_conn.execute(text(f"ALTER TABLE meetings ADD COLUMN {col} JSON"))
 
 
 async def _seed_admin():

@@ -161,6 +161,7 @@ def transcribe_meeting(self, meeting_id: int):
     from app.models.user import User  # noqa: F401 — registers relationship mapper
     from app.services import asr
     from app.services.runtime_settings import get_effective_settings_sync
+    from app.services.speaker import format_segments_text
 
     with SyncSession() as session:
         meeting = _get_meeting(session, meeting_id)
@@ -175,11 +176,20 @@ def transcribe_meeting(self, meeting_id: int):
             logger.info("[%s] ASR 시작: %s", meeting_id, meeting.file_path)
 
             effective = get_effective_settings_sync(session)
-            transcript = asr.transcribe(meeting.file_path, effective)
+            asr_result = asr.transcribe_detailed(meeting.file_path, effective)
+            segments = asr_result["segments"]
+            if segments:
+                meeting.segments = segments
+                transcript = format_segments_text(segments)
+            else:
+                meeting.segments = None
+                transcript = asr_result["text"]
             meeting.transcript = transcript
             session.commit()
 
-            logger.info("[%s] ASR 완료 (%d chars)", meeting_id, len(transcript))
+            logger.info(
+                "[%s] ASR 완료 (%d chars, %d segments)", meeting_id, len(transcript), len(segments)
+            )
             _save_markdown_snapshot(meeting, "01_asr", "음성인식 결과 (ASR)", transcript)
             return meeting_id
         except Exception as exc:
@@ -196,6 +206,7 @@ def postprocess_meeting(self, meeting_id: int):
     from app.services.asr_postprocess_rule import apply_rule_based_correction, load_seed_pairs
     from app.services.runtime_settings import get_effective_settings_sync
     from app.services.sentence_split import split_into_lines
+    from app.services.speaker import format_segments_text
 
     with SyncSession() as session:
         meeting = _get_meeting(session, meeting_id)
@@ -209,7 +220,11 @@ def postprocess_meeting(self, meeting_id: int):
             logger.info("[%s] STT 후처리 시작", meeting_id)
 
             effective = get_effective_settings_sync(session)
-            transcript = meeting.transcript or ""
+            segments = list(meeting.segments or [])
+            if segments:
+                transcript = "\n".join(seg["text"] for seg in segments)
+            else:
+                transcript = meeting.transcript or ""
 
             seed_pairs = load_seed_pairs(settings.CORRECTION_RULES_SEED_PATH)
             correction_rules = session.execute(
@@ -251,7 +266,21 @@ def postprocess_meeting(self, meeting_id: int):
                 user_terms=user_terms,
                 effective=effective,
             )
-            transcript = split_into_lines(transcript)
+            if segments:
+                # 발화 단위(줄)를 유지한 채 교정된 텍스트를 각 발화에 되돌려 넣는다.
+                corrected_lines = transcript.split("\n")
+                if len(corrected_lines) == len(segments):
+                    for seg, line in zip(segments, corrected_lines):
+                        seg["text"] = line.strip() or seg["text"]
+                else:
+                    logger.warning(
+                        "[%s] 후처리 결과 줄 수 불일치(%d != %d) — 발화별 교정 결과 반영 생략",
+                        meeting_id, len(corrected_lines), len(segments),
+                    )
+                meeting.segments = segments
+                transcript = format_segments_text(segments)
+            else:
+                transcript = split_into_lines(transcript)
 
             meeting.transcript = transcript
             session.commit()

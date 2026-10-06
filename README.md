@@ -46,3 +46,22 @@ docker compose restart nginx
 
 외부에서 접근 가능한 실제 도메인이 있다면 자체 서명 인증서 대신 Let's Encrypt
 (certbot) 등 정식 인증서 발급으로 교체하는 것을 권장합니다.
+
+## 화자 분리 (WhisperX + pyannote)
+
+`whisperx_fastapi/` 는 별도 GPU 도커로 구동하는 ASR 서버입니다.
+
+```bash
+cd whisperx_fastapi
+docker build -t whisperx-asr .
+docker run --gpus all -p 9000:9000 -e HF_TOKEN=<HuggingFace 토큰> whisperx-asr
+```
+
+- `POST /transcribe` 응답: `{"text", "language", "diarized", "segments": [{"start", "end", "speaker", "text"}]}`
+  - 쿼리: `diarize`(기본 true), `min_speakers`, `max_speakers`
+  - `HF_TOKEN` 이 없으면 화자 분리는 건너뛰고 `speaker` 는 `UNKNOWN` 으로 반환됩니다.
+- 메인 백엔드는 `segments` 를 `meetings.segments` (JSON)에 저장하고, 화면의 "발화 기록"에
+  시간 구간 / 화자 / 발화 내용을 표시합니다. 화자 이름 클릭 시 표시 이름을 변경할 수 있습니다(`speaker_names`).
+- 기존 DB는 백엔드 기동 시 `segments`, `speaker_names` 컬럼이 자동 추가됩니다
+  (alembic `005_diarization` 과 동일).
+- OpenAI Whisper 사용 시에는 화자 분리 없이 기존처럼 텍스트만 표시됩니다.

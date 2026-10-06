@@ -25,6 +25,8 @@ from app.schemas.meeting import (
     MeetingUpdate,
 )
 
+from app.services.speaker import format_segments_text  # noqa: E402
+
 router = APIRouter(prefix="/api/meetings", tags=["meetings"])
 
 _MAX_BYTES = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
@@ -216,6 +218,9 @@ async def update_meeting(
 
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(meeting, field, value)
+    if payload.speaker_names is not None and meeting.segments:
+        # 화자 이름이 바뀌면 요약/내보내기에 쓰이는 transcript 텍스트도 함께 갱신
+        meeting.transcript = format_segments_text(meeting.segments, meeting.speaker_names)
     await db.commit()
     await db.refresh(meeting)
     return meeting

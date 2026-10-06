@@ -27,6 +27,13 @@ class ActionItemUpdate(BaseModel):
     status: str | None = None
 
 
+class TranscriptSegment(BaseModel):
+    start: float
+    end: float
+    speaker: str
+    text: str
+
+
 class MeetingCreate(BaseModel):
     title: str
     meeting_date: date | None = None
@@ -45,6 +52,7 @@ class MeetingUpdate(BaseModel):
     agenda: str | None = None
     notes: str | None = None
     summary: str | None = None
+    speaker_names: dict[str, str] | None = None
 
 
 class MeetingListItem(BaseModel):
@@ -75,6 +83,8 @@ class MeetingDetail(BaseModel):
     file_size: int | None
     duration_seconds: int | None
     transcript: str | None
+    segments: list[TranscriptSegment] | None = None
+    speaker_names: dict[str, str] | None = None
     summary: str | None
     created_at: datetime
     updated_at: datetime

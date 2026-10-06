@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import JSON, Date, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -30,6 +30,10 @@ class Meeting(Base):
 
     # AI results
     transcript: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # 화자 분리 발화 기록: [{"start": float, "end": float, "speaker": str, "text": str}]
+    segments: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    # 화자 라벨(SPEAKER_00) -> 표시 이름 매핑
+    speaker_names: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Ownership
