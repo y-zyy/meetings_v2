@@ -247,14 +247,17 @@ td.col-date{color:var(--text3);white-space:nowrap;width:1%;}
 .step-line{flex:1;height:1px;background:var(--border);margin:0 8px;min-width:20px;}
 .card{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;box-shadow:var(--shadow);}
 .card-sm{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;}
-.utt{display:flex;gap:12px;padding:12px 0;}
-.utt-avatar{flex:0 0 36px;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;}
-.utt-body{flex:1;min-width:0;}
-.utt-head{display:flex;align-items:baseline;gap:8px;margin-bottom:3px;}
-.utt-speaker{font-size:13px;font-weight:700;color:var(--text);cursor:pointer;}
-.utt-speaker:hover{text-decoration:underline;}
-.utt-time{font-size:11px;color:var(--text3);font-variant-numeric:tabular-nums;}
-.utt-text{font-size:13px;line-height:1.7;color:var(--text);word-break:keep-all;overflow-wrap:anywhere;}
+.transcript-table{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;}
+.transcript-table th{position:sticky;top:0;background:var(--bg);z-index:1;text-align:left;font-size:12px;color:var(--text3);padding:10px 12px;border-bottom:2px solid var(--border);}
+.transcript-table th:nth-child(1){width:140px;}.transcript-table th:nth-child(2){width:155px;}
+.transcript-table td{padding:14px 12px;vertical-align:top;border-bottom:1px solid var(--border);}
+.transcript-table tbody tr:last-child td{border-bottom:0;}
+.utt-speaker{display:inline-block;max-width:100%;font:inherit;font-size:12px;font-weight:700;color:var(--text);background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--speaker-color);border-radius:6px;padding:5px 8px;overflow-wrap:anywhere;text-align:left;}
+button.utt-speaker{cursor:pointer;}button.utt-speaker:hover{background:var(--accent-d);}
+button.utt-speaker:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.utt-time{font-size:12px;color:var(--text3);font-variant-numeric:tabular-nums;}
+.utt-text{font-size:13px;line-height:1.7;color:var(--text);white-space:pre-wrap;overflow-wrap:anywhere;}
+@media(max-width:640px){.transcript-table th:nth-child(1){width:85px;}.transcript-table th:nth-child(2){width:90px;}.transcript-table th,.transcript-table td{padding:10px 6px;}.utt-speaker{font-size:11px;padding:4px;}.utt-time{font-size:11px;}}
 .section-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:12px;}
 .divider{height:1px;background:var(--border);margin:14px 0;}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
@@ -1655,43 +1658,37 @@ function fmtClock(sec) {
   return (h ? `${h}:` : '') + `${p(Math.floor(t % 3600 / 60))}:${p(t % 60)}`;
 }
 
+function transcriptTime(value) {
+  if (value === null || value === undefined || value === '') return '—';
+  const seconds = Number(value);
+  return Number.isFinite(seconds) && seconds >= 0 ? fmtClock(seconds) : '—';
+}
+
 function renderTranscript(m) {
   const box = document.getElementById('transcript-text');
   const hint = document.getElementById('speaker-hint');
-  const segs = m.segments;
-  if (!segs || !segs.length || !segs.some(x => x.speaker)) {
-    // 화자 분리 결과가 없는 경우(OpenAI Whisper 등): 원문 텍스트 표시
-    box.style.whiteSpace = 'pre-wrap';
-    box.textContent = m.transcript || '(발화 기록 없음)';
-    hint.style.display = 'none';
-    return;
-  }
+  const segs = Array.isArray(m.segments) ? m.segments.filter(s => s && typeof s.text === 'string' && s.text.trim()) : [];
+  // Preserve legacy records without inventing speakers or timestamps.
+  const rows = segs.length ? segs : (m.transcript ? [{ text: m.transcript }] : []);
+  hint.style.display = 'none';
+  if (!rows.length) { box.textContent = '(발화 기록 없음)'; return; }
   const names = m.speaker_names || {};
   const order = [];
-  segs.forEach(x => { if (!order.includes(x.speaker)) order.push(x.speaker); });
-  // 같은 화자의 연속 발화는 한 말풍선으로 묶는다
-  const turns = [];
-  segs.forEach(x => {
-    const last = turns[turns.length - 1];
-    if (last && last.speaker === x.speaker) last.texts.push(x.text);
-    else turns.push({ speaker: x.speaker, start: x.start, texts: [x.text] });
-  });
   box.style.whiteSpace = 'normal';
-  box.innerHTML = turns.map(t => {
-    const color = SPEAKER_COLORS[order.indexOf(t.speaker) % SPEAKER_COLORS.length];
-    const name = names[t.speaker] || t.speaker || '화자 미상';
-    return `<div class="utt">
-      <div class="utt-avatar" style="background:${color}">${esc([...name][0] || '?')}</div>
-      <div class="utt-body">
-        <div class="utt-head">
-          <span class="utt-speaker" title="클릭하여 이름 변경" data-speaker="${esc(t.speaker)}" onclick="renameSpeaker(this.dataset.speaker)">${esc(name)}</span>
-          <span class="utt-time">${fmtClock(t.start)}</span>
-        </div>
-        <div class="utt-text">${esc(t.texts.join(' '))}</div>
-      </div>
-    </div>`;
+  const body = rows.map(s => {
+    const known = typeof s.speaker === 'string' && s.speaker.trim() && s.speaker !== 'UNKNOWN';
+    if (known && !order.includes(s.speaker)) order.push(s.speaker);
+    const color = known ? SPEAKER_COLORS[order.indexOf(s.speaker) % SPEAKER_COLORS.length] : 'var(--text3)';
+    const name = known ? String(names[s.speaker] || s.speaker) : '화자 미상';
+    const id = esc(s.speaker).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const speaker = known
+      ? '<button type="button" class="utt-speaker" style="--speaker-color:' + color + '" title="클릭하여 이름 변경" data-speaker="' + id + '" onclick="renameSpeaker(this.dataset.speaker)">' + esc(name) + '</button>'
+      : '<span class="utt-speaker" style="--speaker-color:' + color + '">' + esc(name) + '</span>';
+    const time = transcriptTime(s.start) + ' – ' + transcriptTime(s.end);
+    return '<tr><td>' + speaker + '</td><td class="utt-time">' + time + '</td><td class="utt-text">' + esc(s.text) + '</td></tr>';
   }).join('');
-  hint.style.display = '';
+  box.innerHTML = '<table class="transcript-table" aria-label="발화 기록"><thead><tr><th scope="col">Speaker</th><th scope="col">발화 시간</th><th scope="col">발화 내용</th></tr></thead><tbody>' + body + '</tbody></table>';
+  hint.style.display = order.length ? '' : 'none';
 }
 
 async function renameSpeaker(speaker) {

@@ -4,6 +4,7 @@ x-api-env: &api-env
   env_file: ../.env
 
 x-worker-common: &worker-common
+  image: meetings-backend:261006
   build:
     context: ../backend
     dockerfile: Dockerfile
@@ -57,6 +58,7 @@ services:
 
   # ── FastAPI ───────────────────────────────────────────────────────────────
   api:
+    image: meetings-backend:261006
     build:
       context: ../backend
       dockerfile: Dockerfile
@@ -124,7 +126,10 @@ services:
 
   # ── Nginx ─────────────────────────────────────────────────────────────────
   nginx:
-    image: nginx:alpine
+    image: meetings-frontend:261006
+    build:
+      context: ..
+      dockerfile: service/frontend/Dockerfile
     restart: unless-stopped
     ports:
       - "0.0.0.0:8080:80"   # HTTP -> HTTPS 리다이렉트
