@@ -4,13 +4,15 @@ import os
 import shutil
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.deps import get_admin_user
 from app.core.security import hash_password
 from app.database import get_db
+from app.models.board import Notice, QnAPost, QnAReply
+from app.models.glossary import AdminCorrectionRule, AdminGlossaryTerm
 from app.models.meeting import Meeting
 from app.models.user import User
 from app.schemas.user import UserCreate, UserOut, UserUpdate
@@ -131,8 +133,31 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db), current_
         )).scalar_one()
         if admin_count <= 1:
             raise HTTPException(status_code=400, detail="마지막 관리자 계정은 삭제할 수 없습니다.")
+
+    # users.id를 참조하는 FK가 ON DELETE 없이 정의되어 있어 사용자만 지우면
+    # IntegrityError(→ Internal Server Error)가 발생한다. 참조 데이터를 먼저 정리한다.
+    # 개인 데이터(회의, Q&A 글/댓글)는 삭제하고, 공용 데이터(공지, 관리자 용어/교정규칙)는 삭제한 관리자에게 이관한다.
+    meetings = (await db.execute(select(Meeting).where(Meeting.created_by == user_id))).scalars().all()
+    file_paths = [m.file_path for m in meetings if m.file_path]
+    for m in meetings:
+        await db.delete(m)
+
+    await db.execute(delete(QnAReply).where(QnAReply.author_id == user_id))
+    for post in (await db.execute(select(QnAPost).where(QnAPost.author_id == user_id))).scalars().all():
+        await db.delete(post)  # 답글은 cascade로 함께 삭제
+
+    await db.execute(update(Notice).where(Notice.author_id == user_id).values(author_id=current_admin.id))
+    await db.execute(update(AdminGlossaryTerm).where(AdminGlossaryTerm.created_by == user_id).values(created_by=current_admin.id))
+    await db.execute(update(AdminCorrectionRule).where(AdminCorrectionRule.created_by == user_id).values(created_by=current_admin.id))
+
     await db.delete(user)
     await db.commit()
+
+    for path in file_paths:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
 
 
 # ── meetings (admin view) ─────────────────────────────────────────────────────
