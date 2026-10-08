@@ -100,3 +100,19 @@ WhisperX 컨테이너 교체 시 기존 GPU/포트/네트워크/환경 변수 �
 기존 백엔드의 시작 동작(누락된 화자 관련 컬럼 추가 등)은 그대로 유지됩니다.
 
 프런트엔드 회귀 검사: 저장소 루트에서 `node --test tests/transcript.test.cjs`.
+
+## PostgreSQL 접근 제어
+
+- postgres 는 외부로 포트를 열지 않으며, `internal: true` 인 `db` 네트워크에서 api/worker 컨테이너만 접근합니다(nginx 는 연결 안 됨).
+- 자격 증명은 코드에 하드코딩하지 않고 `.env`의 `POSTGRES_USER` / `POSTGRES_DB` / `POSTGRES_PASSWORD` / `DATABASE_URL` 로만 주입합니다.
+  `POSTGRES_PASSWORD` 와 `DATABASE_URL` 의 비밀번호는 같아야 하며 `openssl rand -hex 24` 로 생성하세요.
+- **기존 DB 볼륨 사용 시**: `POSTGRES_PASSWORD` 환경변수는 최초 초기화 때만 적용됩니다. 볼륨을 지우지 말고 아래처럼 먼저 변경한 뒤 `.env` 를 갱신하세요.
+
+```bash
+cd infra
+docker compose exec postgres psql -U meetings -d meetings -c "ALTER USER meetings PASSWORD '새비밀번호';"
+# .env 의 POSTGRES_PASSWORD, DATABASE_URL 을 같은 값으로 수정 후
+docker compose up -d --force-recreate postgres api worker-ingest worker-asr worker-postprocess worker-minutes
+```
+
+- 디버깅용으로 포트가 필요하면 `127.0.0.1:5432:5432` 처럼 로컬호스트에만 바인딩하세요.

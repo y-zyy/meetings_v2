@@ -9,14 +9,18 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Import models so their metadata is registered
+from app.config import settings
 from app.database import Base
 from app.models import user, meeting  # noqa: F401
 
 target_metadata = Base.metadata
 
+# 자격 증명은 ini 파일이 아닌 환경 설정(.env)에서만 가져온다
+DB_URL = settings.DATABASE_URL
+
 
 def run_migrations_offline():
-    url = config.get_main_option("sqlalchemy.url")
+    url = DB_URL
     context.configure(url=url, target_metadata=target_metadata, literal_binds=True, dialect_opts={"paramstyle": "named"})
     with context.begin_transaction():
         context.run_migrations()
@@ -29,7 +33,7 @@ def do_run_migrations(connection):
 
 
 async def run_migrations_online():
-    url = config.get_main_option("sqlalchemy.url")
+    url = DB_URL
     connectable = create_async_engine(url)
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)

@@ -5,7 +5,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://meetings:meetings@postgres:5432/meetings"
+    # 필수값: 기본 자격 증명을 코드에 두지 않는다 (.env 에서 주입)
+    DATABASE_URL: str
 
     # Redis / Celery
     REDIS_URL: str = "redis://redis:6379/0"

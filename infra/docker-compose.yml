@@ -20,6 +20,7 @@ x-worker-common: &worker-common
     - ../backend/data/correction_rules_seed.json:/app/data/correction_rules_seed.json:ro
   networks:
     - internal
+    - db
 
 services:
 
@@ -27,19 +28,20 @@ services:
   postgres:
     image: postgres:17-alpine
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: meetings
-      POSTGRES_USER: meetings
-      POSTGRES_PASSWORD: meetings
+    # compose 보간은 infra/.env 만 읽으므로, 루트 .env 의 POSTGRES_* 를 컨테이너에 직접 주입한다.
+    # (POSTGRES_PASSWORD 미설정 시 postgres 이미지가 기동을 거부한다)
+    <<: *api-env
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U meetings"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-meetings} -d $${POSTGRES_DB:-meetings}"]
       interval: 5s
       timeout: 5s
       retries: 10
+    # DB 전용 네트워크(외부 접근 불가). nginx 는 연결하지 않는다.
+    # 디버깅 시 포트가 필요하면 127.0.0.1:5432:5432 처럼 로컬호스트에만 바인딩할 것.
     networks:
-      - internal
+      - db
 
   # ── Redis ─────────────────────────────────────────────────────────────────
   redis:
@@ -73,6 +75,7 @@ services:
       - ../data/uploads:/app/data/uploads   # 호스트 경로에 직접 저장
     networks:
       - internal
+      - db
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')\" || exit 1"]
       interval: 10s
@@ -152,3 +155,7 @@ volumes:
 networks:
   internal:
     driver: bridge
+  # postgres 전용: internal:true 로 외부(호스트/인터넷) 라우팅 차단
+  db:
+    driver: bridge
+    internal: true
