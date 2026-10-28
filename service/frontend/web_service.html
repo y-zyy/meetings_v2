@@ -401,6 +401,138 @@ select.input{appearance:none;cursor:pointer;}
 .glossary-add-wrap input:focus{border-color:var(--accent);}
 .glossary-count{font-size:12px;color:var(--text2);}
 .glossary-tags-wrap{display:flex;flex-wrap:wrap;align-content:flex-start;}
+/* ── HOME DASHBOARD ─────────────────────────────────────────────────────── */
+body{background:#f6f7fb}
+.layout-body{min-height:0}
+.main{background:#f6f7fb}
+.content{overflow:auto}
+.dashboard{padding:12px clamp(20px,3.25vw,54px) 0;flex:1;display:flex;flex-direction:column;min-height:0}
+.dot{width:7px;height:7px;border-radius:50%;background:#26a99b;display:inline-block}
+.dashboard-grid{display:grid;grid-template-columns:minmax(0,1.42fr) minmax(350px,1fr);gap:20px;align-items:stretch;flex:1;min-height:610px}
+.panel{border:1px solid #e9ebf1;background:white;border-radius:14px;box-shadow:0 4px 20px rgba(30,40,80,.035);overflow:hidden}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding:24px 25px 19px;border-bottom:1px solid #f0f1f5;gap:15px}
+.panel-title{display:flex;align-items:center;gap:11px;font-size:17px;font-weight:800;letter-spacing:-.5px;color:#242a45}
+.panel-title .mini-icon{display:grid;place-items:center;width:31px;height:31px;border-radius:9px;background:#fff;color:#38359b}
+.panel-title svg{width:18px;height:18px}
+.panel-desc{font-size:12px;color:#98a0ae;margin-top:6px}
+.view-more{border:0;background:none;color:#747b92;font-size:12px;display:inline-flex;align-items:center;gap:5px;font-weight:600;white-space:nowrap}
+.view-more:hover{color:#302e99}
+.meeting-panel{display:flex;flex-direction:column}
+.meeting-actions{padding:18px 25px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.searchbox{display:flex;align-items:center;gap:8px;border:1px solid #e8eaf0;border-radius:9px;padding:0 12px;background:#fbfbfd;height:38px;min-width:0;width:min(290px,100%);color:#929aac}
+.searchbox input{min-width:0;width:100%;border:0;outline:0;background:none;font-size:12px;color:#29314d}
+.searchbox svg{width:16px;height:16px;flex-shrink:0}
+.count-label{font-size:12px;color:#a0a6b5;white-space:nowrap}
+.count-label b{color:#37369c}
+.mtable{width:100%;border-collapse:collapse;table-layout:fixed}
+.mtable thead{background:#f9fafd}
+.mtable th{text-align:left;font-size:12px;color:#959dad;font-weight:600;padding:14px 10px}
+.mtable th:first-child,.mtable td:first-child{padding-left:25px;width:116px}
+.mtable th:last-child,.mtable td:last-child{padding-right:23px;text-align:right;width:92px}
+.mtable td{padding:19px 10px;font-size:13px;color:#8b94a4;border-bottom:1px solid #f0f1f4}
+.mtable tbody tr{cursor:pointer;transition:background .12s}
+.mtable tbody tr:hover{background:#f8f9fe}
+.mtitle{font-size:13px;font-weight:700;color:#303650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msub{font-size:11px;color:#adb3c0;margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.status{display:inline-block;border-radius:5px;padding:5px 9px;font-size:11px;font-weight:700;white-space:nowrap}
+.status.done{background:#eaf6f2;color:#1a9473}
+.status.progress{background:#fff4e5;color:#b7832b}
+.status.waiting{background:#eff0fa;color:#6465a7}
+.status.failed{background:var(--red-d);color:var(--red)}
+.right-grid{display:grid;grid-template-rows:minmax(265px, .92fr) minmax(330px,1.08fr);gap:20px;min-height:0}
+.board-head{padding-bottom:15px}
+.board-content{padding:0 23px}
+.post{display:flex;align-items:center;justify-content:space-between;gap:15px;border-bottom:1px solid #f2f3f6;padding:11px 0;cursor:pointer}
+.post:last-child{border-bottom:0}
+.post:hover .post-name{color:#343195}
+.post-name{font-size:12px;font-weight:600;color:#4a5267;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.post-time{font-size:11px;color:#aeb4bf;white-space:nowrap}
+.post-empty{padding:28px 0;text-align:center;font-size:12px;color:#a0a7b7}
+.new-tag{background:#eeeffe;color:#4542a7;border-radius:4px;padding:3px 5px;font-size:9px;font-weight:800;margin-right:7px}
+.calendar-head{padding:20px 25px 14px;border-bottom:0}
+.calendar-inner{padding:0 24px 19px}
+.cal-control{display:flex;align-items:center;justify-content:space-between;margin-bottom:15px}
+.cal-month{font-size:16px;color:#2b3050;font-weight:800}
+.cal-nav{display:flex;gap:4px}
+.cal-nav button{background:#f7f8fb;border:1px solid #eceef4;color:#636c87;width:28px;height:28px;border-radius:7px;font-size:17px}
+.cal-nav button:hover{background:#eeeffb;color:#312e91}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;text-align:center}
+.weekday{padding:5px 0 10px;font-size:10px;font-weight:700;color:#a0a7b8}
+.weekday:first-child{color:#d48989}.weekday:nth-child(7){color:#767bb2}
+.day{height:31px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:0;background:none;border-radius:8px;position:relative;font-size:11px;color:#596179}
+.day.muted{color:#c9ced8;cursor:default}.day.today{background:#302d91;color:white;font-weight:800}.day.selected:not(.today){background:#eeeffa;color:#312e91;font-weight:800}
+.day.has-event:after{content:'';position:absolute;bottom:2px;width:3px;height:3px;background:#6b68d2;border-radius:50%}.day.today.has-event:after{background:white}
+.calendar-foot{margin-top:12px;padding-top:12px;border-top:1px solid #f0f1f5;display:flex;justify-content:space-between;align-items:center;color:#9ba2b2;font-size:11px}
+.calendar-foot strong{color:#505a79;font-size:11px}
+.footer{display:flex;justify-content:space-between;gap:16px;align-items:center;min-height:68px;margin-top:24px;border-top:1px solid #e7e9f0;font-size:11px;color:#a3aab6}
+.footer b{font-weight:800;color:#868da5;letter-spacing:.03em}
+@media(max-width:1100px){.dashboard-grid{grid-template-columns:1fr;min-height:0}.right-grid{grid-template-columns:1fr 1fr;grid-template-rows:auto}}
+@media(max-width:750px){body{height:auto;min-height:100vh;overflow:visible}.topbar{height:88px}.layout-body{height:auto;min-height:calc(100vh - 88px)}.sidebar{width:65px}.sb-item{justify-content:center;padding:12px 0}.sb-item span{display:none}.dashboard{padding:12px 17px 0}.right-grid{grid-template-columns:1fr}.footer{align-items:flex-start;flex-direction:column;justify-content:center;padding:15px 0}.mtable th:first-child,.mtable td:first-child{padding-left:13px;width:93px}.mtable th:last-child,.mtable td:last-child{padding-right:13px;width:70px}.mtable td{padding:15px 4px}.panel-head{padding:18px}.meeting-actions{padding:15px}}
+
+/* 사용자 가이드: 대시보드 상단 전체 폭 영역 */
+.guide-panel{width:100%;display:flex;align-items:center;gap:16px;padding:12px 20px;margin-bottom:12px;min-height:104px;flex-shrink:0;background:linear-gradient(110deg,#fff 0%,#fff 65%,#f8f9ff 100%)}
+.guide-intro{min-width:205px;max-width:245px;flex:0 0 24%}
+.guide-kicker{font-size:10px;font-weight:800;letter-spacing:.14em;color:#6866ae;margin-bottom:3px}
+.guide-intro h2{font-size:20px;letter-spacing:-.7px;color:#242a45;margin-bottom:3px}
+.guide-intro p{font-size:12px;line-height:1.4;color:#8c94a5}
+.guide-items{display:flex;flex:1;gap:8px;min-width:0}
+.guide-item{flex:1;min-width:0;display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border:1px solid #eff0f6;border-radius:10px;background:#fbfbff;text-align:left;font:inherit;cursor:pointer;transition:border-color .12s}
+.guide-item:hover{border-color:#cfd0ec}
+.guide-number{flex-shrink:0;font-size:12px;font-weight:800;color:#4845a0;background:#eeeefb;width:28px;height:28px;border-radius:8px;display:grid;place-items:center}
+.guide-item div{min-width:0;display:flex;flex-direction:column;gap:3px}
+.guide-item strong{font-size:12px;color:#363b55;line-height:1.4}
+.guide-item div span{font-size:11px;color:#979eae;line-height:1.5}
+.guide-more{flex-shrink:0;border:1px solid #dedff0;border-radius:8px;background:white;color:#35328d;padding:8px 11px;font-size:12px;font-weight:700;white-space:nowrap}
+.guide-more span{margin-left:5px}
+.notice-only{padding-top:8px}
+.notice-only .post{padding:18px 0}
+.guide-steps{list-style:none;display:flex;flex-direction:column;gap:12px;font-size:13px;color:var(--text2);line-height:1.6}
+.guide-steps b{display:block;color:var(--text);margin-bottom:2px}
+@media(max-width:1350px){.guide-panel{gap:10px}.guide-intro{flex:0 0 190px}.guide-items{gap:6px}}
+@media(max-width:900px){.guide-panel{flex-wrap:wrap;align-items:flex-start}.guide-intro{flex:1 1 100%;max-width:none}.guide-items{flex:1 1 100%}}
+@media(max-width:650px){.guide-panel{padding:20px}.guide-items{flex-direction:column}.guide-item{width:100%}}
+
+/* 하단 회사 로고: company-logo.png 파일을 HTML과 같은 경로에 두면 표시됩니다. */
+.footer-brand{display:flex;align-items:center;gap:16px;min-width:0;flex-wrap:wrap}
+.footer-logo-slot{display:flex;align-items:center;justify-content:center;min-width:128px;width:156px;height:44px;padding:5px 9px;border:1px dashed #c8ccd5;background:#fff;flex-shrink:0}
+.footer-company-logo{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}
+.footer-logo-placeholder{font-size:10px;color:#9aa1ad;white-space:nowrap}
+@media(max-width:750px){.footer-brand{align-items:flex-start;gap:10px}}
+
+/* 상단 사용자 정보 메뉴 */
+.account-wrap{position:relative;flex-shrink:0}
+.account-trigger{display:inline-flex;align-items:center;gap:9px;padding:7px 10px;background:transparent;border:1px solid transparent;color:#34384d;font-size:13px;font-weight:600}
+.account-trigger:hover,.account-trigger[aria-expanded="true"]{border-color:#d9dce6;background:#f6f7fb}
+.account-icon{width:25px;height:25px;border:1px solid #d6d9e4;background:#f3f4f9;display:grid;place-items:center;color:#383681}
+.account-caret{color:#7b8293;font-size:10px;margin-left:4px}
+.account-popover{position:absolute;right:0;top:calc(100% + 8px);width:310px;background:white;border:1px solid #dfe2e9;box-shadow:0 8px 23px rgba(15,23,42,.12);z-index:130;display:none;color:#303747;text-align:left}
+.account-popover.open{display:block}
+.account-popover-title{font-size:14px;font-weight:700;padding:17px 18px 14px;border-bottom:1px solid #edf0f4}
+.account-profile{display:flex;align-items:center;gap:11px;padding:17px 18px}
+.account-profile-avatar{width:42px;height:42px;display:grid;place-items:center;background:#f0f1f8;color:#302d91;border:1px solid #e1e3ed}
+.account-profile strong{display:block;font-size:14px}.account-profile small{display:block;color:#8a91a0;margin-top:5px;font-size:11px}
+.account-meta{padding:0 18px 13px;font-size:12px}
+.account-meta div{display:flex;gap:10px;padding:7px 0}.account-meta dt{width:62px;flex-shrink:0;color:#8790a0}.account-meta dd{color:#3f4658;overflow-wrap:anywhere}
+.account-menu{padding:9px;border-top:1px solid #edf0f4}
+.account-menu button{width:100%;padding:12px;text-align:left;color:#343b4d;background:white;border:0;font-size:12px}
+.account-menu button:hover{background:#f4f5f9}
+.account-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.28);display:none;align-items:center;justify-content:center;z-index:190;padding:20px}
+.account-modal-backdrop.open{display:flex}
+.account-modal{width:min(440px,100%);background:#fff;border:1px solid #d8dce5;padding:24px}
+.account-modal h2{font-size:17px;margin-bottom:7px}.account-modal p{font-size:12px;color:#7d8594;margin-bottom:21px;line-height:1.6}
+.account-field{display:block;margin-bottom:15px;font-size:12px;font-weight:600;color:#4a5263}
+.account-field input{display:block;width:100%;margin-top:6px;padding:10px 11px;border:1px solid #d8dce5;background:#fff;font:inherit;font-weight:400;color:#303747}
+.account-field input:focus{outline:1px solid #302d91}.account-field input:disabled{background:#f5f6f9;color:#8c94a3}
+.account-modal-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}
+.account-modal-actions button{font-size:12px;padding:9px 16px;border:1px solid #cdd1db;background:white;color:#434a59}
+.account-modal-actions button.primary{background:#302d91;color:#fff;border-color:#302d91}
+@media(max-width:750px){.account-trigger{font-size:12px;gap:5px}.account-popover{right:-55px;width:min(310px,calc(100vw - 20px))}}
+
+/* 장식 요소의 둥근 모서리를 직각으로 통일 */
+:root{--r:0px;--rs:0px;}
+*,*::before,*::after{border-radius:0 !important;}
+/* 상태 표시용 원형 점, 화자 아바타, 단계 표시 원은 유지 */
+.dot,.day.has-event::after,.utt-avatar,.step-circle{border-radius:50% !important;}
 </style>
 </head>
 <body>
@@ -502,7 +634,18 @@ select.input{appearance:none;cursor:pointer;}
     <div style="font-size:11px;font-weight:600;letter-spacing:2.5px;color:#1B1464;font-family:'Arial',sans-serif;text-transform:uppercase;white-space:nowrap;">KOREA AEROSPACE INDUSTRIES, LTD.</div>
   </div>
   <div style="flex:1;"></div>
-  <div style="font-size:14px;color:var(--text2);" id="topbar-user"></div>
+  <div class="account-wrap" id="account-wrap">
+    <button type="button" class="account-trigger" id="account-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="account-popover" onclick="toggleAccountMenu()">
+      <span class="account-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.5 3.4-7 8-7s8 2.5 8 7"/></svg></span>
+      <span id="topbar-user">사용자 정보</span><span class="account-caret" aria-hidden="true">▼</span>
+    </button>
+    <div class="account-popover" id="account-popover" role="region" aria-label="사용자 정보 및 개인 설정">
+      <div class="account-popover-title">내 정보</div>
+      <div class="account-profile"><span class="account-profile-avatar" aria-hidden="true"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.5 3.4-7 8-7s8 2.5 8 7"/></svg></span><div><strong id="account-pop-name">-</strong><small id="account-pop-role">-</small></div></div>
+      <dl class="account-meta"><div><dt>아이디</dt><dd id="account-pop-id">-</dd></div><div><dt>부서</dt><dd id="account-pop-dept">미설정</dd></div><div><dt>이메일</dt><dd id="account-pop-email">미설정</dd></div></dl>
+      <div class="account-menu"><button type="button" onclick="openAccountSettings()">개인정보 및 설정 관리 →</button></div>
+    </div>
+  </div>
   <button class="btn btn-ghost btn-sm" onclick="doLogout()">로그아웃</button>
 </header>
 
@@ -513,7 +656,7 @@ select.input{appearance:none;cursor:pointer;}
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="8"/><path d="M10 6v8M6 10h8"/></svg>
     <span>새 회의</span>
   </button>
-  <button id="sb-my" class="sb-item active" onclick="setNav(this,'my')" title="회의 목록">
+  <button id="sb-my" class="sb-item" onclick="setNav(this,'my')" title="회의 목록">
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="3"/><path d="M7 8h6M7 12h4"/></svg>
     <span>회의 목록</span>
   </button>
@@ -535,10 +678,6 @@ select.input{appearance:none;cursor:pointer;}
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8.325 2.317a.75.75 0 01.734-.617h1.882a.75.75 0 01.734.617l.18 1.044a5.96 5.96 0 011.4.813l1-.377a.75.75 0 01.916.3l.941 1.63a.75.75 0 01-.163.97l-.824.7a6.02 6.02 0 010 1.606l.824.7a.75.75 0 01.163.97l-.94 1.63a.75.75 0 01-.917.3l-1-.377a5.96 5.96 0 01-1.4.813l-.18 1.044a.75.75 0 01-.734.617H9.06a.75.75 0 01-.734-.617l-.18-1.044a5.96 5.96 0 01-1.4-.813l-1 .377a.75.75 0 01-.917-.3l-.94-1.63a.75.75 0 01.163-.97l.824-.7a6.02 6.02 0 010-1.606l-.824-.7a.75.75 0 01-.163-.97l.94-1.63a.75.75 0 01.917-.3l1 .377a5.96 5.96 0 011.4-.813l.18-1.044z"/><circle cx="10" cy="10" r="2.25"/></svg>
       <span>관리자</span><span id="sb-admin-badge" class="admin-badge" style="display:none;"></span>
     </button>
-    <div style="width:calc(100% - 16px);margin:6px 8px 0;background:rgba(255,255,255,.15);border-radius:8px;padding:8px 12px;" id="sb-user-card">
-      <div style="font-size:13px;font-weight:700;color:#fff;" id="sb-fullname">-</div>
-      <div style="font-size:11px;color:rgba(255,255,255,.5);" id="sb-role">-</div>
-    </div>
   </div>
 </aside>
 
@@ -546,8 +685,69 @@ select.input{appearance:none;cursor:pointer;}
 <div class="main">
   <div class="content">
 
+    <!-- ── 홈 대시보드 ────────────────────────────────────────────────────── -->
+    <div id="page-home" class="page active">
+      <div class="dashboard">
+        <section class="panel guide-panel" aria-labelledby="guide-heading">
+          <div class="guide-intro">
+            <div class="guide-kicker">GETTING STARTED</div>
+            <h2 id="guide-heading">사용자 가이드</h2>
+            <p>KAI Meetings를 더욱 편리하게 활용하는 방법을 안내합니다.</p>
+          </div>
+          <div class="guide-items">
+            <button type="button" class="guide-item" onclick="setNav(document.querySelector('.sb-item'),'new')"><span class="guide-number">01</span><div><strong>회의 녹음 또는 파일 등록</strong><span>실시간 녹음 및 음성 파일 업로드</span></div></button>
+            <button type="button" class="guide-item" onclick="openGuide()"><span class="guide-number">02</span><div><strong>AI 회의록 자동 생성</strong><span>음성 인식과 주요 내용 요약</span></div></button>
+            <button type="button" class="guide-item" onclick="setNav(document.getElementById('sb-my'),'my')"><span class="guide-number">03</span><div><strong>회의록 확인 및 관리</strong><span>내용 검토 후 저장 및 내보내기</span></div></button>
+          </div>
+          <button class="guide-more" onclick="openGuide()">이용 가이드 보기 <span>↗</span></button>
+        </section>
+        <div class="dashboard-grid">
+          <section class="panel meeting-panel" aria-labelledby="meeting-heading">
+            <div class="panel-head">
+              <div>
+                <div class="panel-title" id="meeting-heading"><span class="mini-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>최근 회의 목록</div>
+                <div class="panel-desc">최근 진행한 회의를 빠르게 살펴보세요.</div>
+              </div>
+              <button class="view-more" onclick="setNav(document.getElementById('sb-my'),'my')">전체보기 <span>→</span></button>
+            </div>
+            <div class="meeting-actions">
+              <label class="searchbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><input id="home-search-input" placeholder="회의 제목 검색" oninput="scheduleHomeSearch()" aria-label="회의 제목 검색"></label>
+              <span class="count-label">최근 회의 <b id="home-meeting-count">0</b>건</span>
+            </div>
+            <table class="mtable"><thead><tr><th>회의 일시</th><th>회의 제목</th><th>상태</th></tr></thead><tbody id="home-meetings"></tbody></table>
+            <div id="home-meeting-empty" style="display:none;text-align:center;padding:55px 16px;color:#a0a7b7;font-size:13px"></div>
+          </section>
+          <div class="right-grid">
+            <section class="panel">
+              <div class="panel-head board-head"><div class="panel-title"><span class="mini-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h14v15H5zM8 8h8M8 12h8M8 16h5"/></svg></span>공지사항</div><button class="view-more" onclick="setNav(document.querySelector('.sb-item[onclick*=notices]'),'notices')">전체보기 →</button></div>
+              <div class="board-content notice-only"><div id="home-notices"></div></div>
+            </section>
+            <section class="panel">
+              <div class="panel-head calendar-head"><div class="panel-title"><span class="mini-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/></svg></span>캘린더</div><button class="view-more" onclick="resetCalendar()">오늘로 이동 ↗</button></div>
+              <div class="calendar-inner">
+                <div class="cal-control"><span class="cal-month" id="calendar-month"></span><div class="cal-nav"><button onclick="changeMonth(-1)" aria-label="이전 달">‹</button><button onclick="changeMonth(1)" aria-label="다음 달">›</button></div></div>
+                <div class="cal-grid" id="calendar-grid"></div>
+                <div class="calendar-foot"><span>● 표시는 회의가 있는 날짜입니다.</span><strong id="selected-date"></strong></div>
+              </div>
+            </section>
+          </div>
+        </div>
+        <footer class="footer">
+          <div class="footer-brand">
+            <!-- 회사 로고 변경: 아래 src의 company-logo.png를 원하는 파일명/경로로 수정하세요. -->
+            <div class="footer-logo-slot">
+              <img class="footer-company-logo" src="./company-logo.png" alt="회사 로고" onload="this.nextElementSibling.style.display='none'" onerror="this.style.display='none'">
+              <span class="footer-logo-placeholder">회사 로고 이미지 영역</span>
+            </div>
+            <div><b>KAI MEETINGS</b> &nbsp; | &nbsp; 사내 회의록 작성 AI 서비스</div>
+          </div>
+          <div>Copyright © <span id="copyright-year"></span> Korea Aerospace Industries, Ltd. All rights reserved.</div>
+        </footer>
+      </div>
+    </div>
+
     <!-- ── 회의 목록 ──────────────────────────────────────────────────────── -->
-    <div id="page-my" class="page active">
+    <div id="page-my" class="page">
       <div style="padding:0 28px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;">
         <div style="display:flex;align-items:center;">
           <button class="list-tab active">나의 회의 목록</button>
@@ -1041,6 +1241,36 @@ select.input{appearance:none;cursor:pointer;}
 
 </div><!-- /layout-body -->
 
+<!-- ── 이용 가이드 MODAL ─────────────────────────────────────────────────── -->
+<div class="modal-bg" id="guide-modal" onclick="if(event.target===this)closeGuide()">
+  <div class="modal" style="width:500px;">
+    <div class="modal-title">KAI Meetings 이용 가이드</div>
+    <ol class="guide-steps">
+      <li><b>01. 회의 녹음 또는 파일 등록</b>좌측 '새 회의' 메뉴에서 음성 파일을 업로드하거나 브라우저에서 바로 녹음한 뒤 회의 정보를 입력합니다.</li>
+      <li><b>02. AI 회의록 자동 생성</b>등록된 음성은 음성 인식 → 후처리 → 화자 분리 → 요약 순서로 자동 처리되며, 진행 상황은 처리 화면에서 확인할 수 있습니다.</li>
+      <li><b>03. 회의록 확인 및 관리</b>'회의 목록'에서 회의를 열어 요약과 발화 기록을 검토·수정하고, 필요한 형식으로 내보낼 수 있습니다.</li>
+      <li><b>용어사전</b>자주 쓰는 고유명사·전문용어를 '용어사전'에 등록하면 음성 인식 정확도가 높아집니다.</li>
+    </ol>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="setNav(document.querySelector('.sb-item[onclick*=qna]'),'qna');closeGuide()">Q&amp;A 바로가기</button>
+      <button class="btn btn-primary" onclick="closeGuide()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 개인 설정 MODAL ───────────────────────────────────────────────────── -->
+<div class="account-modal-backdrop" id="account-modal-backdrop" onclick="if(event.target===this)closeAccountSettings()">
+  <div class="account-modal" role="dialog" aria-modal="true" aria-labelledby="account-modal-heading">
+    <h2 id="account-modal-heading">개인 설정</h2>
+    <p>부서와 이메일은 이 브라우저에만 저장되며 서버의 계정 정보는 변경되지 않습니다.</p>
+    <label class="account-field">아이디<input id="account-edit-id" type="text" disabled></label>
+    <label class="account-field">이름<input id="account-edit-name" type="text" disabled></label>
+    <label class="account-field">부서<input id="account-edit-dept" type="text" maxlength="60" placeholder="부서명을 입력하세요"></label>
+    <label class="account-field">이메일<input id="account-edit-email" type="email" maxlength="120" autocomplete="email" placeholder="name@example.com"></label>
+    <div class="account-modal-actions"><button type="button" onclick="closeAccountSettings()">취소</button><button type="button" class="primary" onclick="saveAccountSettings()">저장</button></div>
+  </div>
+</div>
+
 <!-- ── 공지 등록 MODAL ───────────────────────────────────────────────────── -->
 <div class="modal-bg" id="notice-modal">
   <div class="modal" style="width:520px;">
@@ -1259,15 +1489,13 @@ async function afterLogin({ skipConsent = false } = {}) {
 function acceptConsent() {
   sessionStorage.setItem('kai_consent', '1');
   document.getElementById('consent-overlay').classList.add('hidden');
-  document.getElementById('topbar-user').textContent = _me.full_name || _me.username;
-  document.getElementById('sb-fullname').textContent = _me.full_name || _me.username;
-  document.getElementById('sb-role').textContent = _me.role === 'admin' ? '관리자' : '일반 사용자';
+  showAccountProfile();
+  setNav(null, 'home');
   if (_me.role === 'admin') {
     document.getElementById('sb-admin').style.display = '';
     document.getElementById('notice-write-btn').style.display = '';
     checkPendingUsers();
   }
-  loadList();
 }
 
 async function checkPendingUsers() {
@@ -1298,7 +1526,9 @@ function doLogout() {
   fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
   document.getElementById('sb-admin').style.display = 'none';
   document.getElementById('sb-admin-badge').style.display = 'none';
-  document.getElementById('sb-role').textContent = '-';
+  setAccountMenu(false);
+  document.getElementById('account-modal-backdrop').classList.remove('open');
+  document.getElementById('topbar-user').textContent = '사용자 정보';
   document.getElementById('consent-overlay').classList.add('hidden');
   document.getElementById('login-overlay').classList.remove('hidden');
   document.getElementById('login-username').value = '';
@@ -1307,12 +1537,13 @@ function doLogout() {
 }
 
 // ── Navigation ────────────────────────────────────────────────────────────────
-const pageMap = { new: 'page-new', my: 'page-my', detail: 'page-detail', processing: 'page-processing', admin: 'page-admin', notices: 'page-notices', qna: 'page-qna', glossary: 'page-glossary' };
+const pageMap = { home: 'page-home', new: 'page-new', my: 'page-my', detail: 'page-detail', processing: 'page-processing', admin: 'page-admin', notices: 'page-notices', qna: 'page-qna', glossary: 'page-glossary' };
 function setNav(el, key) {
   document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
   if (el) el.classList.add('active');
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(pageMap[key])?.classList.add('active');
+  if (key === 'home') loadHome();
   if (key === 'my') loadList();
   if (key === 'admin') { loadAdminStats(); loadAdminGlossary(); loadCorrectionRules(); }
   if (key === 'new') resetNewForm();
@@ -1982,9 +2213,192 @@ async function openProcessingResult() {
 
 // ── Navigation ────────────────────────────────────────────────────────────────
 function goHome() {
-  const myBtn = document.getElementById('sb-my');
-  setNav(myBtn, 'my');
+  document.getElementById('home-search-input').value = '';
+  setNav(null, 'home');
 }
+
+// ── Home dashboard ────────────────────────────────────────────────────────────
+const HOME_STATUS = {
+  done: ['완료', 'done'], failed: ['실패', 'failed'], queued: ['대기', 'waiting'],
+};
+let _homeSearchTimer = null;
+let _calMeetings = [];   // 캘린더 표시용 회의 목록 (meeting_date 기준)
+const _now = new Date();
+let _calYear = _now.getFullYear(), _calMonth = _now.getMonth(), _calDay = _now.getDate();
+
+function loadHome() {
+  loadHomeMeetings();
+  loadHomeNotices();
+  loadCalendarMeetings();
+}
+
+function scheduleHomeSearch() {
+  clearTimeout(_homeSearchTimer);
+  _homeSearchTimer = setTimeout(loadHomeMeetings, 300);
+}
+
+async function loadHomeMeetings() {
+  const q = document.getElementById('home-search-input').value.trim();
+  try {
+    const params = new URLSearchParams({ page: 1, page_size: 5 });
+    if (q) params.set('q', q);
+    const data = await api('GET', '/meetings?' + params);
+    if (!data) return;
+    const rows = data.items;
+    document.getElementById('home-meeting-count').textContent = rows.length;
+    const empty = document.getElementById('home-meeting-empty');
+    empty.textContent = q ? '검색 결과가 없습니다.' : '등록된 회의가 없습니다. 새 회의를 만들어보세요.';
+    empty.style.display = rows.length ? 'none' : 'block';
+    const tbody = document.getElementById('home-meetings');
+    tbody.innerHTML = '';
+    rows.forEach(m => {
+      const [label, cls] = HOME_STATUS[m.status] || ['처리 중', 'progress'];
+      const date = m.meeting_date || fmtDateOnly(m.created_at);
+      const time = m.created_at ? new Date(m.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+      const sub = [m.location, m.attendees].filter(Boolean).join(' · ');
+      const tr = document.createElement('tr');
+      tr.tabIndex = 0;
+      tr.innerHTML = `
+        <td>${esc(date.slice(5).replace('-', '.'))}<br><span style="font-size:11px;color:#b8beca">${esc(time)}</span></td>
+        <td><div class="mtitle">${esc(m.title)}</div>${sub ? `<div class="msub">${esc(sub)}</div>` : ''}</td>
+        <td><span class="status ${cls}">${label}</span></td>`;
+      tr.onclick = () => openDetail(m.id, m.status);
+      tr.onkeydown = e => { if (e.key === 'Enter') openDetail(m.id, m.status); };
+      tbody.appendChild(tr);
+    });
+  } catch (e) { toast('최근 회의 로드 실패: ' + e.message, 'err'); }
+}
+
+async function loadHomeNotices() {
+  const box = document.getElementById('home-notices');
+  try {
+    const items = await api('GET', '/board/notices');
+    if (!items) return;
+    if (!items.length) { box.innerHTML = '<div class="post-empty">등록된 공지사항이 없습니다.</div>'; return; }
+    const weekAgo = Date.now() - 7 * 24 * 3600 * 1000;
+    box.innerHTML = items.slice(0, 4).map(n => {
+      const fresh = n.created_at && new Date(n.created_at).getTime() > weekAgo;
+      const d = fmtDateOnly(n.created_at);
+      return `<div class="post" tabindex="0" onclick="openHomeNotice(${n.id})" onkeydown="if(event.key==='Enter')this.click()">
+        <span class="post-name">${fresh ? '<span class="new-tag">N</span>' : ''}${esc(n.title)}</span>
+        <time class="post-time">${esc(d.slice(5).replace('-', '.'))}</time></div>`;
+    }).join('');
+  } catch (e) { box.innerHTML = '<div class="post-empty">공지사항을 불러오지 못했습니다.</div>'; }
+}
+
+async function openHomeNotice(id) {
+  setNav(document.querySelector('.sb-item[onclick*=notices]'), 'notices');
+  await loadNotices();
+  openNoticeDetail(id);
+}
+
+async function loadCalendarMeetings() {
+  try {
+    const data = await api('GET', '/meetings?' + new URLSearchParams({ page: 1, page_size: 100 }));
+    if (data) _calMeetings = data.items;
+  } catch { /* 캘린더 표시는 부가 기능 */ }
+  renderCalendar();
+}
+
+function calStamp(day) {
+  return `${_calYear}-${String(_calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function renderCalendar() {
+  document.getElementById('calendar-month').textContent = `${_calYear}년 ${_calMonth + 1}월`;
+  const dates = new Set(_calMeetings.map(m => m.meeting_date || fmtDateOnly(m.created_at)));
+  const first = new Date(_calYear, _calMonth, 1).getDay();
+  const days = new Date(_calYear, _calMonth + 1, 0).getDate();
+  const prevDays = new Date(_calYear, _calMonth, 0).getDate();
+  const isThisMonth = _calYear === _now.getFullYear() && _calMonth === _now.getMonth();
+  let html = ['일','월','화','수','목','금','토'].map(x => `<div class="weekday">${x}</div>`).join('');
+  for (let i = 0; i < Math.ceil((first + days) / 7) * 7; i++) {
+    const day = i - first + 1;
+    const valid = day > 0 && day <= days;
+    const num = day < 1 ? prevDays + day : day > days ? day - days : day;
+    const cls = ['day'];
+    if (!valid) cls.push('muted');
+    if (valid && isThisMonth && day === _now.getDate()) cls.push('today');
+    if (valid && day === _calDay) cls.push('selected');
+    if (valid && dates.has(calStamp(day))) cls.push('has-event');
+    html += `<button class="${cls.join(' ')}" ${valid ? `onclick="selectDay(${day})"` : 'disabled'} aria-label="${valid ? calStamp(day) + ' 날짜 선택' : '다른 달'}">${num}</button>`;
+  }
+  document.getElementById('calendar-grid').innerHTML = html;
+  const count = _calMeetings.filter(m => (m.meeting_date || fmtDateOnly(m.created_at)) === calStamp(_calDay)).length;
+  document.getElementById('selected-date').textContent = `${_calMonth + 1}월 ${_calDay}일 · 회의 ${count}건`;
+}
+
+function selectDay(d) { _calDay = d; renderCalendar(); }
+function changeMonth(delta) {
+  const d = new Date(_calYear, _calMonth + delta, 1);
+  _calYear = d.getFullYear(); _calMonth = d.getMonth(); _calDay = 1;
+  renderCalendar();
+}
+function resetCalendar() {
+  _calYear = _now.getFullYear(); _calMonth = _now.getMonth(); _calDay = _now.getDate();
+  renderCalendar();
+}
+
+function openGuide() { document.getElementById('guide-modal').classList.add('open'); }
+function closeGuide() { document.getElementById('guide-modal').classList.remove('open'); }
+
+// ── Account menu ──────────────────────────────────────────────────────────────
+// 부서/이메일은 서버 계정 필드가 없어 사용자별로 브라우저에만 저장한다.
+function accountStorageKey() { return 'kai-meetings-profile-' + (_me?.username || ''); }
+function loadLocalProfile() {
+  try {
+    const v = JSON.parse(localStorage.getItem(accountStorageKey()) || 'null');
+    return { department: typeof v?.department === 'string' ? v.department : '', email: typeof v?.email === 'string' ? v.email : '' };
+  } catch { return { department: '', email: '' }; }
+}
+function showAccountProfile() {
+  if (!_me) return;
+  const name = _me.full_name || _me.username;
+  const local = loadLocalProfile();
+  document.getElementById('topbar-user').textContent = name;
+  document.getElementById('account-pop-name').textContent = name;
+  document.getElementById('account-pop-role').textContent = _me.role === 'admin' ? '관리자' : '일반 사용자';
+  document.getElementById('account-pop-id').textContent = _me.username;
+  document.getElementById('account-pop-dept').textContent = local.department || '미설정';
+  document.getElementById('account-pop-email').textContent = local.email || '미설정';
+}
+function setAccountMenu(open) {
+  document.getElementById('account-popover').classList.toggle('open', open);
+  document.getElementById('account-trigger').setAttribute('aria-expanded', String(open));
+}
+function toggleAccountMenu() { setAccountMenu(!document.getElementById('account-popover').classList.contains('open')); }
+function openAccountSettings() {
+  setAccountMenu(false);
+  const local = loadLocalProfile();
+  document.getElementById('account-edit-id').value = _me?.username || '';
+  document.getElementById('account-edit-name').value = _me?.full_name || '';
+  document.getElementById('account-edit-dept').value = local.department;
+  document.getElementById('account-edit-email').value = local.email;
+  document.getElementById('account-modal-backdrop').classList.add('open');
+  document.getElementById('account-edit-dept').focus();
+}
+function closeAccountSettings() {
+  document.getElementById('account-modal-backdrop').classList.remove('open');
+  document.getElementById('account-trigger').focus();
+}
+function saveAccountSettings() {
+  const email = document.getElementById('account-edit-email');
+  if (email.value.trim() && !email.checkValidity()) { email.reportValidity(); return; }
+  const profile = { department: document.getElementById('account-edit-dept').value.trim(), email: email.value.trim() };
+  try { localStorage.setItem(accountStorageKey(), JSON.stringify(profile)); } catch { /* 저장 불가 환경 */ }
+  showAccountProfile();
+  closeAccountSettings();
+  toast('개인 설정이 저장되었습니다.', 'ok');
+}
+document.addEventListener('pointerdown', e => {
+  if (!document.getElementById('account-wrap').contains(e.target)) setAccountMenu(false);
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (document.getElementById('account-modal-backdrop').classList.contains('open')) closeAccountSettings();
+  else if (document.getElementById('guide-modal').classList.contains('open')) closeGuide();
+  else setAccountMenu(false);
+});
 
 // ── Export ────────────────────────────────────────────────────────────────────
 function showExport() { document.getElementById('export-modal').classList.add('open'); }
@@ -2442,6 +2856,7 @@ function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+  document.getElementById('copyright-year').textContent = new Date().getFullYear();
   document.getElementById('meeting-date').value = new Date().toISOString().slice(0,10);
   // Try to restore session from HttpOnly refresh token cookie (silent login)
   const refreshed = await tryRefreshToken();
