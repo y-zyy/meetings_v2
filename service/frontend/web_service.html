@@ -1324,6 +1324,91 @@ body{background:#f6f7fb}
 <div id="toast-area"></div>
 
 <script>
+// ── 미리보기 모드 ──────────────────────────────────────────────────────────────
+// 주소에 ?preview 를 붙이면 백엔드 없이 예시 데이터로 자동 로그인되어 모든 화면을 볼 수 있다.
+// ?preview=admin 이면 관리자 계정으로 로그인한다. 실제 서버에는 요청하지 않는다.
+(function () {
+  const mode = new URLSearchParams(location.search).get('preview');
+  if (mode === null) return;
+  const isAdmin = mode === 'admin';
+  const day = n => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
+  const me = { id: 1, username: isAdmin ? 'admin' : 'kim01', full_name: isAdmin ? '관리자' : '김철수', email: 'user@koreaaero.com', role: isAdmin ? 'admin' : 'user', is_active: true };
+  let meetings = [
+    [0, '주간 사업 추진 현황 점검 회의', 'done'], [1, '프로젝트 진행사항 정기 회의', 'llm_processing'],
+    [3, '품질 개선 방안 협의', 'done'], [5, 'AI 회의록 서비스 운영 회의', 'queued'],
+    [8, '부서 간 업무 협업 회의', 'done'], [12, '하반기 주요 과제 검토', 'failed'], [20, '신규 장비 도입 검토 회의', 'done'],
+  ].map(([d, title, status], i) => ({
+    id: i + 1, title, status, meeting_date: day(d), location: '본관 3층 회의실', attendees: '김철수, 이영희, 박민수',
+    duration_seconds: 1800 + i * 420, file_name: `meeting_${i + 1}.m4a`, created_at: day(d) + 'T05:00:00',
+  }));
+  const segments = [
+    { speaker: 'SPEAKER_00', start: 0, text: '그럼 이번 주 진행 현황부터 공유드리겠습니다.' },
+    { speaker: 'SPEAKER_01', start: 6.2, text: '네, 설계 검토는 예정대로 금요일까지 마무리됩니다.' },
+    { speaker: 'SPEAKER_00', start: 14.8, text: '시험 일정은 어떻게 되나요?' },
+    { speaker: 'SPEAKER_02', start: 18.1, text: '다음 주 화요일부터 시작하고, 결과는 목요일에 공유하겠습니다.' },
+  ];
+  const summary = '## 회의 개요\n- 주간 진행 현황 공유 및 일정 점검\n\n## 주요 논의\n- 설계 검토 금요일 완료 예정\n- 시험은 다음 주 화요일 착수\n\n## 결정 사항\n| 항목 | 담당 | 기한 |\n|---|---|---|\n| 설계 검토 완료 | 이영희 | 금요일 |\n| 시험 결과 공유 | 박민수 | 다음 주 목요일 |';
+  const notices = [
+    { id: 1, title: 'KAI Meetings 서비스 이용 안내', content: '회의록 작성 서비스 이용 방법을 안내드립니다.', author_name: '관리자', is_pinned: true, created_at: day(1) + 'T01:00:00' },
+    { id: 2, title: '회의록 작성 및 활용 가이드', content: '회의록 활용 가이드입니다.', author_name: '관리자', is_pinned: false, created_at: day(5) + 'T01:00:00' },
+    { id: 3, title: '서비스 점검 및 업데이트 안내', content: '정기 점검 일정 안내입니다.', author_name: '관리자', is_pinned: false, created_at: day(9) + 'T01:00:00' },
+    { id: 4, title: 'AI 회의록 사용 시 유의사항', content: '보안 관련 유의사항입니다.', author_name: '관리자', is_pinned: false, created_at: day(13) + 'T01:00:00' },
+  ];
+  const qna = [
+    { id: 1, title: '녹음 파일 최대 용량이 궁금합니다', content: '몇 MB까지 업로드할 수 있나요?', author_name: '김철수', is_secret: false, is_mine: true, has_reply: true, created_at: day(2) + 'T02:00:00',
+      replies: [{ id: 1, content: '현재 최대 500MB까지 업로드할 수 있습니다.', author_name: '관리자', created_at: day(1) + 'T02:00:00' }] },
+    { id: 2, title: '화자 이름 변경 방법', content: '화자 이름은 어디서 바꾸나요?', author_name: '이영희', is_secret: false, is_mine: false, has_reply: false, created_at: day(4) + 'T02:00:00', replies: [] },
+  ];
+  const terms = ['KF-21', 'FA-50', 'KUH-1', '수리온'].map((term, i) => ({ id: i + 1, term, description: '' }));
+  const rules = [{ id: 1, wrong: '케이에프 이십일', correct: 'KF-21', description: '기종명' }];
+  const users = [me, { id: 2, username: 'lee02', full_name: '이영희', email: 'lee@koreaaero.com', role: 'user', is_active: true, created_at: day(30) }];
+
+  const json = (body, status = 200) => Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }));
+  const realFetch = window.fetch.bind(window);
+  window.fetch = function (input, opts = {}) {
+    const url = new URL(typeof input === 'string' ? input : input.url, location.href);
+    if (!url.pathname.startsWith('/api/')) return realFetch(input, opts);
+    const path = url.pathname.slice(4), method = (opts.method || 'GET').toUpperCase(), q = url.searchParams;
+    let m;
+    if (path === '/auth/refresh' || path === '/auth/login') return json({ access_token: 'preview', token_type: 'bearer' });
+    if (path === '/auth/me') return json(me);
+    if (path === '/auth/check-username') return json({ available: true });
+    if (method === 'GET' && path === '/meetings') {
+      const kw = (q.get('q') || '').toLowerCase();
+      const all = meetings.filter(x => x.title.toLowerCase().includes(kw));
+      const page = +q.get('page') || 1, size = +q.get('page_size') || 20;
+      return json({ total: all.length, page, page_size: size, items: all.slice((page - 1) * size, page * size) });
+    }
+    if ((m = path.match(/^\/meetings\/(\d+)\/status$/))) return json({ status: meetings.find(x => x.id === +m[1])?.status || 'done' });
+    if ((m = path.match(/^\/meetings\/(\d+)\/export$/))) return Promise.resolve(new Response('미리보기 모드 예시 파일입니다.', { status: 200 }));
+    if ((m = path.match(/^\/meetings\/(\d+)$/))) {
+      const meeting = meetings.find(x => x.id === +m[1]);
+      if (method === 'DELETE') { meetings = meetings.filter(x => x.id !== +m[1]); return Promise.resolve(new Response(null, { status: 204 })); }
+      if (method === 'PATCH') Object.assign(meeting, JSON.parse(opts.body || '{}'));
+      return json({ ...meeting, summary, transcript: segments.map(x => x.text).join(' '), segments, speaker_names: meeting.speaker_names || {} });
+    }
+    if (method === 'GET' && path === '/board/notices') return json(notices);
+    if (method === 'GET' && path === '/board/qna') return json(qna);
+    if ((m = path.match(/^\/board\/qna\/(\d+)$/)) && method === 'GET') return json(qna.find(x => x.id === +m[1]));
+    if (method === 'GET' && path === '/glossary/user') return json({ items: terms, total: terms.length });
+    if (method === 'GET' && path === '/glossary/admin') return json({ items: terms, total: terms.length });
+    if (method === 'GET' && path === '/glossary/admin/rules') return json({ items: rules, total: rules.length });
+    if (method === 'GET' && path === '/admin/stats') return json({ user_count: users.length, meeting_count: meetings.length, processing_count: 2, storage_bytes: 3.2 * 1073741824, pending_count: 0 });
+    if (method === 'GET' && path === '/admin/users') return json({ items: users, total: users.length });
+    if (method === 'GET' && path === '/admin/settings') return json({ ASR_API_URL: 'http://asr.example/api', LLM_MODEL: 'example-model' });
+    // 그 외 등록/수정/삭제 요청은 성공한 것으로만 응답한다 (데이터는 바뀌지 않음).
+    return json({ ok: true, id: 0 });
+  };
+  document.addEventListener('DOMContentLoaded', () => {
+    sessionStorage.setItem('kai_consent', '1');
+    const tag = document.createElement('div');
+    tag.textContent = '미리보기 모드 · 예시 데이터';
+    tag.style.cssText = 'position:fixed;left:50%;top:0;transform:translateX(-50%);z-index:2000;background:#f59e0b;color:#fff;font-size:11px;font-weight:700;padding:5px 10px;pointer-events:none;';
+    document.body.appendChild(tag);
+  });
+})();
+</script>
+<script>
 // ── State ────────────────────────────────────────────────────────────────────
 let _token = null; // Access token lives in memory only (never localStorage)
 let _me = null;
@@ -1962,7 +2047,6 @@ function resetNewForm() {
   document.getElementById('meeting-location').value = '';
   document.getElementById('meeting-attendees').value = '';
   document.getElementById('meeting-agenda').value = '';
-  document.getElementById('meeting-notes').value = '';
   document.getElementById('sc1').className = 'step-circle s-active'; document.getElementById('sc1').textContent = '1';
   document.getElementById('sn1').className = 'step-name s-active';
   document.getElementById('sc2').className = 'step-circle'; document.getElementById('sn2').className = 'step-name';
